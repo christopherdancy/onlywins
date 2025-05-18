@@ -12,45 +12,90 @@ export const formatMarketCap = (value: number): string => {
   return `$${value.toFixed(2)}`;
 };
 
-// Generate data points for a pumping chart
+// Generate data points for a chart that's already in mid-pump
 export const generatePumpChartData = (duration: number = 60): ChartData[] => {
   const data: ChartData[] = [];
   const now = Date.now();
   
-  // Base market cap (between $100K and $10M)
-  const baseMarketCap = Math.random() * 9_900_000 + 100_000;
+  // Base market cap (between $20K and $40K for easier reading)
+  const baseMarketCap = Math.random() * 20_000 + 20_000;
   
-  // Generate data for each point
+  // Generate data for each point - ensure continuous upward movement
+  // to avoid plateau patterns
   for (let i = 0; i < duration; i++) {
     const timestamp = now - (duration - i) * 1000; // 1 second intervals
+    let marketCap;
     
-    // First 40% relatively stable with slight uptrend
-    if (i < duration * 0.4) {
-      const smallChange = baseMarketCap * (1 + (Math.random() * 0.01 - 0.005 + (i / (duration * 4))));
-      data.push({
-        timestamp,
-        marketCap: smallChange
-      });
+    // First 20% - early accumulation phase with shallow but steady uptrend
+    if (i < duration * 0.2) {
+      // Initial growth rate increases steadily
+      const progressFactor = i / (duration * 0.2); // 0 to 1 factor
+      const growthRate = 1 + (0.008 + progressFactor * 0.012 + Math.random() * 0.006); // Increased minimums
+      marketCap = i === 0 
+        ? baseMarketCap 
+        : data[i-1].marketCap * growthRate;
     } 
-    // Middle 30% - starting to pump (10-15% increase)
-    else if (i < duration * 0.7) {
-      const previousMarketCap = data[i - 1].marketCap;
-      const increaseFactor = 1 + (Math.random() * 0.03 + 0.01); // 1-4% increase per point
-      data.push({
-        timestamp,
-        marketCap: previousMarketCap * increaseFactor
-      });
+    // Middle 55% - accelerating growth phase with no plateaus
+    else if (i < duration * 0.75) {
+      // Growth should accelerate through this phase
+      const progressInMidPhase = (i - (duration * 0.2)) / (duration * 0.55);
+      
+      // Base factor increases from 2% to 6% through this phase (increased minimums)
+      const baseFactor = 0.02 + progressInMidPhase * 0.04;
+      
+      // Add randomness but ensure minimum growth
+      const randomFactor = Math.random() * 0.03;
+      const growthRate = 1 + baseFactor + randomFactor;
+      
+      marketCap = data[i-1].marketCap * growthRate;
+      
+      // Insert occasional larger jumps (15% chance) - increased frequency
+      if (Math.random() < 0.15) {
+        marketCap *= (1 + Math.random() * 0.08); // Bigger jumps
+      }
     } 
-    // Final 30% - parabolic pump (20%+ total increase)
+    // Final 25% - parabolic phase with increasing slope
     else {
-      const previousMarketCap = data[i - 1].marketCap;
-      // Increasing growth rate as we approach the end
-      const progressInFinalPhase = (i - duration * 0.7) / (duration * 0.3);
-      const increaseFactor = 1 + (Math.random() * 0.04 + 0.02 + progressInFinalPhase * 0.08);
-      data.push({
-        timestamp,
-        marketCap: previousMarketCap * increaseFactor
-      });
+      // Growth rate increases more dramatically in final phase
+      const progressInFinalPhase = (i - duration * 0.75) / (duration * 0.25);
+      const pumpFactor = 0.05 + progressInFinalPhase * 0.10; // 5% to 15% - increased
+      
+      // Add volatility but ensure it always moves up
+      const volatility = Math.random() * 0.04; // Increased volatility 
+      const growthRate = 1 + pumpFactor + volatility;
+      
+      marketCap = data[i-1].marketCap * growthRate;
+      
+      // Ensure the last few points always accelerate upward
+      if (i >= duration - 5) {
+        const pointsFromEnd = duration - i;
+        // Add extra growth in final points (more as we get closer to the end)
+        const extraGrowth = (5 - pointsFromEnd) * 0.015; // 1.5% to 7.5% extra growth
+        marketCap *= (1 + extraGrowth);
+      }
+    }
+    
+    data.push({
+      timestamp,
+      marketCap
+    });
+  }
+  
+  // More aggressive plateau detection and correction
+  for (let i = 0; i < data.length - 5; i++) {
+    const segment = data.slice(i, i + 5);
+    const startPrice = segment[0].marketCap;
+    const endPrice = segment[segment.length - 1].marketCap;
+    const growth = (endPrice - startPrice) / startPrice;
+    
+    // If a plateau is detected, increase the values to create an uptrend
+    if (growth < 0.05) { // More aggressive threshold (5% instead of 3%)
+      // Apply a fix by increasing each point progressively
+      for (let j = 1; j < segment.length; j++) {
+        // Each point gets progressively higher adjustment
+        const adjustment = 1 + (j * 0.015); // Increased adjustment factor
+        data[i + j].marketCap *= adjustment;
+      }
     }
   }
   
@@ -59,11 +104,13 @@ export const generatePumpChartData = (duration: number = 60): ChartData[] => {
 
 // Generate random funny names for assets
 const nameAdjectives = [
-  'Moon', 'Rocket', 'Diamond', 'Cosmic', 'Galactic', 'Lambo', 'Lunar', 'Stellar', 'Epic', 'Hyper'
+  'Moon', 'Rocket', 'Diamond', 'Cosmic', 'Galactic', 'Lambo', 'Lunar', 'Stellar', 'Epic', 'Hyper',
+  'Alpha', 'Meta', 'Mega', 'Ultra', 'Super', 'Turbo', 'Nitro', 'Quantum', 'Cyber', 'Degen'
 ];
 
 const nameNouns = [
-  'Doge', 'Shiba', 'Pepe', 'Floki', 'Elon', 'Ape', 'Cat', 'Moon', 'Coin', 'Token'
+  'Doge', 'Shiba', 'Pepe', 'Floki', 'Elon', 'Ape', 'Cat', 'Moon', 'Coin', 'Token',
+  'Wojak', 'Chad', 'Pump', 'Lambo', 'Rocket', 'Gainz', 'Tendies', 'Mars', 'Fomo', 'Yolo'
 ];
 
 export const generateRandomName = (): string => {
