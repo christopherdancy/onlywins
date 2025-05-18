@@ -12,6 +12,109 @@ export const formatMarketCap = (value: number): string => {
   return `$${value.toFixed(2)}`;
 };
 
+// Generate random crypto icon
+export const generateTokenIcon = (symbol: string): string => {
+  // Define a set of vibrant colors for crypto tokens
+  const bgColors = [
+    '#FF4500', '#FF8C00', '#FFD700', '#7CFC00', '#00FA9A', 
+    '#00FFFF', '#00BFFF', '#0000FF', '#8A2BE2', '#FF00FF',
+    '#FF1493', '#FF69B4', '#8B008B', '#4B0082', '#9370DB',
+    '#1E90FF', '#32CD32', '#DAA520', '#FF6347', '#20B2AA'
+  ];
+  
+  // Random background color
+  const bgColor = bgColors[Math.floor(Math.random() * bgColors.length)];
+  
+  // Generate random pattern elements for the icon
+  const generatePattern = () => {
+    const patterns = [
+      // Circle in the middle
+      `<circle cx="50" cy="50" r="${20 + Math.random() * 15}" fill="${shadeColor(bgColor, -20)}" />`,
+      
+      // Multiple smaller circles
+      Array.from({length: 3 + Math.floor(Math.random() * 5)}, (_, i) => {
+        const r = 5 + Math.random() * 10;
+        const angle = (i / 5) * Math.PI * 2;
+        const distance = 15 + Math.random() * 20;
+        const x = 50 + Math.cos(angle) * distance;
+        const y = 50 + Math.sin(angle) * distance;
+        return `<circle cx="${x}" cy="${y}" r="${r}" fill="${shadeColor(bgColor, -30)}" />`;
+      }).join(''),
+      
+      // Hexagon pattern
+      `<polygon points="50,30 70,40 70,60 50,70 30,60 30,40" fill="${shadeColor(bgColor, -20)}" />`,
+      
+      // Triangle pattern
+      `<polygon points="50,25 75,75 25,75" fill="${shadeColor(bgColor, -20)}" />`,
+      
+      // Diamond pattern
+      `<polygon points="50,20 80,50 50,80 20,50" fill="${shadeColor(bgColor, -20)}" />`
+    ];
+    
+    return patterns[Math.floor(Math.random() * patterns.length)];
+  };
+  
+  // Add random decorative elements
+  const generateDecorations = () => {
+    const decorations = [];
+    const numDecorations = 1 + Math.floor(Math.random() * 3);
+    
+    for (let i = 0; i < numDecorations; i++) {
+      const options = [
+        // Small dot
+        `<circle cx="${20 + Math.random() * 60}" cy="${20 + Math.random() * 60}" r="${2 + Math.random() * 4}" fill="#FFF" opacity="0.6" />`,
+        
+        // Small line
+        (() => {
+          const x1 = 30 + Math.random() * 40;
+          const y1 = 30 + Math.random() * 40;
+          const length = 10 + Math.random() * 20;
+          const angle = Math.random() * Math.PI * 2;
+          const x2 = x1 + Math.cos(angle) * length;
+          const y2 = y1 + Math.sin(angle) * length;
+          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#FFF" stroke-width="2" opacity="0.5" />`;
+        })(),
+        
+        // Small square
+        `<rect x="${30 + Math.random() * 40}" y="${30 + Math.random() * 40}" width="${5 + Math.random() * 10}" height="${5 + Math.random() * 10}" fill="#FFF" opacity="0.5" />`
+      ];
+      
+      decorations.push(options[Math.floor(Math.random() * options.length)]);
+    }
+    
+    return decorations.join('');
+  };
+  
+  // Get first letter of symbol for the icon
+  const letter = symbol.charAt(0);
+  
+  // Generate the SVG
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+      <circle cx="50" cy="50" r="50" fill="${bgColor}" />
+      ${generatePattern()}
+      ${generateDecorations()}
+      <text x="50" y="50" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">${letter}</text>
+    </svg>
+  `;
+  
+  // Convert to data URL
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
+// Helper function to lighten or darken a color
+function shadeColor(color: string, percent: number): string {
+  let R = parseInt(color.substring(1, 3), 16);
+  let G = parseInt(color.substring(3, 5), 16);
+  let B = parseInt(color.substring(5, 7), 16);
+
+  R = Math.min(255, Math.max(0, R + R * percent / 100));
+  G = Math.min(255, Math.max(0, G + G * percent / 100));
+  B = Math.min(255, Math.max(0, B + B * percent / 100));
+
+  return "#" + ((1 << 24) + (Math.round(R) << 16) + (Math.round(G) << 8) + Math.round(B)).toString(16).slice(1);
+}
+
 // Generate data points for a chart that's already in mid-pump
 export const generatePumpChartData = (duration: number = 60): ChartData[] => {
   const data: ChartData[] = [];
@@ -19,6 +122,9 @@ export const generatePumpChartData = (duration: number = 60): ChartData[] => {
   
   // Base market cap (between $20K and $40K for easier reading)
   const baseMarketCap = Math.random() * 20_000 + 20_000;
+  
+  // Maximum reasonable market cap (10 billion)
+  const MAX_MARKET_CAP = 10_000_000_000;
   
   // Generate data for each point - ensure continuous upward movement
   // to avoid plateau patterns
@@ -75,6 +181,9 @@ export const generatePumpChartData = (duration: number = 60): ChartData[] => {
       }
     }
     
+    // Cap market cap at maximum reasonable value
+    marketCap = Math.min(marketCap, MAX_MARKET_CAP);
+    
     data.push({
       timestamp,
       marketCap
@@ -95,6 +204,9 @@ export const generatePumpChartData = (duration: number = 60): ChartData[] => {
         // Each point gets progressively higher adjustment
         const adjustment = 1 + (j * 0.015); // Increased adjustment factor
         data[i + j].marketCap *= adjustment;
+        
+        // Make sure we don't exceed the maximum cap
+        data[i + j].marketCap = Math.min(data[i + j].marketCap, MAX_MARKET_CAP);
       }
     }
   }
@@ -131,12 +243,15 @@ export const generateRandomSymbol = (name: string): string => {
 // Generate a random asset with pump chart
 export const generateRandomAsset = (): Asset => {
   const name = generateRandomName();
+  const symbol = generateRandomSymbol(name);
   const chartData = generatePumpChartData();
+  const iconUrl = generateTokenIcon(symbol);
   
   return {
     id: Math.random().toString(36).substring(2, 9),
     name,
-    symbol: generateRandomSymbol(name),
+    symbol,
+    iconUrl,
     currentMarketCap: chartData[chartData.length - 1].marketCap,
     chartData
   };

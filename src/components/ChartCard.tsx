@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Asset } from '../types';
-import { formatMarketCap } from '../utils/chartUtils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,11 +30,23 @@ interface ChartCardProps {
 
 // Helper function for simplified k-notation
 const formatSimplifiedPrice = (value: number): string => {
-  if (value >= 1_000_000) {
+  // If value is too large (over 1 trillion), show as max value
+  if (value >= 1_000_000_000_000) {
+    return "$999.99B+";
+  }
+  // Billions
+  if (value >= 1_000_000_000) {
+    return `$${(value / 1_000_000_000).toFixed(2)}B`;
+  }
+  // Millions
+  else if (value >= 1_000_000) {
     return `$${(value / 1_000_000).toFixed(2)}M`;
-  } else if (value >= 1_000) {
+  }
+  // Thousands
+  else if (value >= 1_000) {
     return `$${(value / 1_000).toFixed(2)}k`;
   }
+  // Regular number
   return `$${value.toFixed(2)}`;
 };
 
@@ -61,6 +72,16 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
   const minMarketCap = Math.min(...visibleData.map(point => point.marketCap));
   const maxMarketCap = Math.max(...visibleData.map(point => point.marketCap));
 
+  // Detect if we're currently in a dump (significant price drop)
+  const lastFewMarketCaps = asset.chartData.slice(-4).map(point => point.marketCap);
+  const isInDump = lastFewMarketCaps.length >= 2 && 
+    lastFewMarketCaps[lastFewMarketCaps.length - 1] < lastFewMarketCaps[lastFewMarketCaps.length - 2] * 0.95;
+  
+  // Detect if we're in a recovery (bouncing back after a drop)
+  const isInRecovery = lastFewMarketCaps.length >= 3 && 
+    lastFewMarketCaps[lastFewMarketCaps.length - 1] > lastFewMarketCaps[lastFewMarketCaps.length - 2] * 1.05 &&
+    lastFewMarketCaps[lastFewMarketCaps.length - 2] < lastFewMarketCaps[lastFewMarketCaps.length - 3] * 0.95;
+
   // Prepare chart price labels (just 4 evenly spaced ones)
   const priceSteps = [];
   const priceRange = maxMarketCap - minMarketCap;
@@ -81,22 +102,28 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
     const lastFewPoints = visibleData.slice(-5);
     for (let i = 1; i < lastFewPoints.length; i++) {
       // Make sure each point is at least 2% higher than the previous
-      const minValue = lastFewPoints[i-1].marketCap * 1.02;
-      if (lastFewPoints[i].marketCap < minValue) {
-        lastFewPoints[i] = {
-          ...lastFewPoints[i],
-          marketCap: minValue
-        };
+      // But skip this during dump phase to allow drops
+      if (!isInDump) {
+        const minValue = lastFewPoints[i-1].marketCap * 1.02;
+        if (lastFewPoints[i].marketCap < minValue) {
+          lastFewPoints[i] = {
+            ...lastFewPoints[i],
+            marketCap: minValue
+          };
+        }
       }
     }
     
     // Make the last point (current price) positioned at approximately 75% of vertical height too
-    const lastPoint = lastFewPoints[lastFewPoints.length - 1];
-    const verticalTarget = minMarketCap + (maxMarketCap - minMarketCap) * 0.75;
-    
-    // Only adjust if needed - ensure it's not lower than current value
-    if (lastPoint.marketCap < verticalTarget) {
-      lastPoint.marketCap = verticalTarget;
+    // But skip during dumps to allow the drop to be visible
+    if (!isInDump) {
+      const lastPoint = lastFewPoints[lastFewPoints.length - 1];
+      const verticalTarget = minMarketCap + (maxMarketCap - minMarketCap) * 0.75;
+      
+      // Only adjust if needed - ensure it's not lower than current value
+      if (lastPoint.marketCap < verticalTarget) {
+        lastPoint.marketCap = verticalTarget;
+      }
     }
     
     // Replace the last few points in the visibleData
@@ -113,7 +140,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
           data: visibleData.map(point => point.marketCap),
           fill: true,
           backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          borderColor: '#4bc0c0',
+          borderColor: isInDump ? '#ff6b6b' : isInRecovery ? '#00bf63' : '#4bc0c0',
           tension: 0.3,
           pointHoverRadius: 0,
           borderWidth: 2,
@@ -122,12 +149,12 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
             // Only show the last point (at 75% of the chart)
             const index = context.dataIndex;
             const count = context.dataset.data.length;
-            return index === count - 1 ? '#4bc0c0' : 'transparent';
+            return index === count - 1 ? (isInDump ? '#ff6b6b' : isInRecovery ? '#00bf63' : '#4bc0c0') : 'transparent';
           },
           pointBorderColor: function(context: {dataIndex: number, dataset: {data: any[]}}) {
             const index = context.dataIndex;
             const count = context.dataset.data.length;
-            return index === count - 1 ? '#4bc0c0' : 'transparent';
+            return index === count - 1 ? (isInDump ? '#ff6b6b' : isInRecovery ? '#00bf63' : '#4bc0c0') : 'transparent';
           },
           pointRadius: function(context: {dataIndex: number, dataset: {data: any[]}}) {
             const index = context.dataIndex;
@@ -142,7 +169,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
         },
       ],
     };
-  }, [asset, minMarketCap, maxMarketCap]);
+  }, [asset, minMarketCap, maxMarketCap, isInDump, isInRecovery]);
 
   // Effect to position the price bubble at the exact position of the last visible data point (75%)
   useEffect(() => {
@@ -225,16 +252,18 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
 
   return (
     <div className="chart-card">
-      <div className="chart-header">
-        <h2>{asset.name} <span className="symbol">{asset.symbol}</span></h2>
-      </div>
+
+      {/* Chart container becomes the main focus */}
       <div className="chart-container" ref={chartContainerRef}>
         {/* Future projection area - just a gradient, no question mark or price */}
         <div className="chart-projection-area"></div>
         
         {/* Current price highlight - positioned at the end of the visible chart */}
         <div className="current-price-indicator">
-          <div className="current-price-bubble" ref={priceBubbleRef}>
+          <div 
+            className={`current-price-bubble ${isInDump ? 'price-dropping' : isInRecovery ? 'price-recovering' : ''}`} 
+            ref={priceBubbleRef}
+          >
             {formatSimplifiedPrice(displayPrice)}
           </div>
         </div>
@@ -250,9 +279,19 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
         
         <Line ref={chartRef} data={chartData} options={chartOptions} />
       </div>
-      <div className="chart-trending">
-        <div className="trending-badge">🚀 Trending</div>
-        <div className="change-badge" style={{ color: percentIncrease > 0 ? '#4bc0c0' : '#ff6b6b' }}>
+      
+      {/* Footer section contains name, trending badge and change percentage */}
+      <div className="chart-footer">
+        <div className="chart-info">
+          <div className="token-header">
+            <img src={asset.iconUrl} alt={asset.symbol} className="token-icon" />
+            <h2>{asset.name}</h2>
+          </div>
+        </div>
+        <div 
+          className={`change-badge ${isInDump ? 'dropping' : isInRecovery ? 'recovering' : ''}`}
+          style={{ color: percentIncrease > 0 ? '#4bc0c0' : '#ff6b6b' }}
+        >
           {percentIncrease > 0 ? '+' : ''}{percentIncrease.toFixed(2)}%
         </div>
       </div>

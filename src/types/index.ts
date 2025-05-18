@@ -7,10 +7,14 @@ export interface Asset {
   id: string;
   name: string;
   symbol: string;
+  iconUrl: string; // SVG icon for the asset
   currentMarketCap: number;
   chartData: ChartData[];
 }
 
 export interface SwipeDirection {
   isRight: boolean;
+  isLeft?: boolean;
+  isUp?: boolean;
+  isDown?: boolean;
 } 
