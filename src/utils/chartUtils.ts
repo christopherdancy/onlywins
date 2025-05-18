@@ -1,4 +1,4 @@
-import { Asset, ChartData } from '../types';
+import { Asset, ChartPoint, ChartStrategy } from '../types';
 
 // Function to format large numbers in a readable way
 export const formatMarketCap = (value: number): string => {
@@ -115,9 +115,9 @@ function shadeColor(color: string, percent: number): string {
   return "#" + ((1 << 24) + (Math.round(R) << 16) + (Math.round(G) << 8) + Math.round(B)).toString(16).slice(1);
 }
 
-// Generate data points for a chart that's already in mid-pump
-export const generatePumpChartData = (duration: number = 60): ChartData[] => {
-  const data: ChartData[] = [];
+// Generate uptrend chart data with occasional dumps
+export const generateUptrendChartData = (duration: number = 60): ChartPoint[] => {
+  const data: ChartPoint[] = [];
   const now = Date.now();
   
   // Base market cap (between $20K and $40K for easier reading)
@@ -214,6 +214,101 @@ export const generatePumpChartData = (duration: number = 60): ChartData[] => {
   return data;
 };
 
+// Generate downtrend chart data with occasional pumps
+export const generateDowntrendChartData = (duration: number = 60): ChartPoint[] => {
+  const data: ChartPoint[] = [];
+  const now = Date.now();
+  
+  // Start with a higher market cap to allow room for downtrend
+  // Between $500K and $2M
+  const initialMarketCap = Math.random() * 1_500_000 + 500_000;
+  
+  // Minimum reasonable market cap (to prevent going to zero)
+  const MIN_MARKET_CAP = 5_000;
+  
+  // Generate data for each point - simulate a downtrend with occasional pumps
+  for (let i = 0; i < duration; i++) {
+    const timestamp = now - (duration - i) * 1000; // 1 second intervals
+    let marketCap;
+    
+    // First 15% - slow decline with small volatility (distribution phase)
+    if (i < duration * 0.15) {
+      // Small decreases with some volatility
+      const dropRate = 0.98 - (Math.random() * 0.02); // 0-2% drop
+      marketCap = i === 0 
+        ? initialMarketCap 
+        : data[i-1].marketCap * dropRate;
+      
+      // Small chance of a mini pump to bait investors
+      if (Math.random() < 0.1) {
+        marketCap *= (1 + Math.random() * 0.03); // 0-3% pump
+      }
+    } 
+    // Middle 60% - accelerating downtrend (panic selling)
+    else if (i < duration * 0.75) {
+      // Drop rate increases through this phase
+      const progressInMidPhase = (i - (duration * 0.15)) / (duration * 0.6);
+      
+      // Base drop factor increases from 2% to 6% through this phase
+      const baseFactor = 0.02 + progressInMidPhase * 0.04;
+      
+      // Add randomness but ensure minimum drop
+      const randomFactor = Math.random() * 0.02;
+      const dropRate = 1 - (baseFactor + randomFactor);
+      
+      marketCap = data[i-1].marketCap * dropRate;
+      
+      // Insert occasional short-lived pumps (15% chance)
+      if (Math.random() < 0.15) {
+        const pumpFactor = 1 + (Math.random() * 0.12); // 0-12% pump
+        marketCap *= pumpFactor;
+      }
+    } 
+    // Final 25% - capitulation and slight recovery attempts (dead cat bounce)
+    else {
+      // Sharp drops with intermittent recovery attempts
+      const isRecoveryAttempt = Math.random() < 0.3; // 30% chance of recovery attempt
+      
+      if (isRecoveryAttempt) {
+        // Recovery attempt - more substantial pump
+        const pumpFactor = 1 + (Math.random() * 0.15 + 0.05); // 5-20% pump
+        marketCap = data[i-1].marketCap * pumpFactor;
+        
+        // Ensure last 5 points have at least one significant pump (30%+) to give hope
+        if (i >= duration - 5 && Math.random() < 0.4) {
+          marketCap *= (1.3 + Math.random() * 0.2); // 30-50% pump
+        }
+      } else {
+        // Continued drop at varied rates
+        const dropRate = 0.95 - (Math.random() * 0.03); // 5-8% drop
+        marketCap = data[i-1].marketCap * dropRate;
+      }
+    }
+    
+    // Ensure market cap doesn't fall below minimum
+    marketCap = Math.max(marketCap, MIN_MARKET_CAP);
+    
+    data.push({
+      timestamp,
+      marketCap
+    });
+  }
+  
+  // Ensure we don't end on an extreme low - add a final pump if needed
+  const lastFewPoints = data.slice(-5);
+  const lowestPoint = Math.min(...lastFewPoints.map(p => p.marketCap));
+  const lastPoint = lastFewPoints[lastFewPoints.length - 1];
+  
+  // If we're near the lowest point in the last 5 points, add a recovery pump
+  if (lastPoint.marketCap < lowestPoint * 1.2) {
+    // Add a 10-30% pump to the last point to give hope of recovery
+    const pumpFactor = 1.1 + (Math.random() * 0.2);
+    data[data.length - 1].marketCap *= pumpFactor;
+  }
+  
+  return data;
+};
+
 // Generate random funny names for assets
 const nameAdjectives = [
   'Moon', 'Rocket', 'Diamond', 'Cosmic', 'Galactic', 'Lambo', 'Lunar', 'Stellar', 'Epic', 'Hyper',
@@ -240,20 +335,49 @@ export const generateRandomSymbol = (name: string): string => {
     .toUpperCase();
 };
 
-// Generate a random asset with pump chart
+// Generate a random asset with appropriate chart strategy
 export const generateRandomAsset = (): Asset => {
   const name = generateRandomName();
   const symbol = generateRandomSymbol(name);
-  const chartData = generatePumpChartData();
+  
+  // Randomly select strategy - 60% uptrend, 40% downtrend
+  const strategy = Math.random() < 0.6 
+    ? ChartStrategy.UPTREND_WITH_DUMPS 
+    : ChartStrategy.DOWNTREND_WITH_PUMPS;
+  
+  // Generate chart data based on the strategy
+  const chartData = strategy === ChartStrategy.UPTREND_WITH_DUMPS
+    ? generateUptrendChartData()
+    : generateDowntrendChartData();
+  
   const iconUrl = generateTokenIcon(symbol);
+  
+  // Generate random descriptions based on strategy
+  const descriptions = strategy === ChartStrategy.UPTREND_WITH_DUMPS
+    ? [
+        `${name} is on a bullish trajectory with strong fundamentals.`,
+        `The next big thing in crypto with massive growth potential.`,
+        `A revolutionary project with solid tokenomics and roadmap.`,
+        `Trending on social media with growing community support.`
+      ]
+    : [
+        `${name} has been declining but shows signs of reversal.`,
+        `Recent dip presents a potential buying opportunity.`,
+        `Undervalued gem with upcoming catalysts on the horizon.`,
+        `Technical indicators suggest a possible trend reversal soon.`
+      ];
+  
+  const description = descriptions[Math.floor(Math.random() * descriptions.length)];
   
   return {
     id: Math.random().toString(36).substring(2, 9),
     name,
     symbol,
+    description,
     iconUrl,
     currentMarketCap: chartData[chartData.length - 1].marketCap,
-    chartData
+    chartData,
+    strategy
   };
 };
 

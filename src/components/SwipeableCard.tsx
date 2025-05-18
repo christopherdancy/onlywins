@@ -31,10 +31,10 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped }) => {
       
       if (event.deltaX > 100) {
         // Swiped right - Buy
-        onSwiped({ isRight: true });
+        onSwiped({ isRight: true, isLeft: false });
       } else if (event.deltaX < -100) {
         // Swiped left - Skip
-        onSwiped({ isRight: false });
+        onSwiped({ isRight: false, isLeft: true });
       } else {
         // Reset position if not swiped far enough
         setSwipePosition({ x: 0, y: 0 });

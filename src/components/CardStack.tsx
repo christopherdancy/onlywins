@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SwipeableCard from './SwipeableCard';
-import { Asset, SwipeDirection } from '../types';
+import { Asset, SwipeDirection, ChartStrategy } from '../types';
 import { generateAssetCollection, generateRandomAsset } from '../utils/chartUtils';
 
 const CardStack: React.FC = () => {
@@ -9,13 +9,13 @@ const CardStack: React.FC = () => {
   const [showMatch, setShowMatch] = useState(false);
   const [activeAsset, setActiveAsset] = useState<Asset | null>(null);
   const [volatilityState, setVolatilityState] = useState({
-    inDump: false,         // Currently in a dump phase
-    dumpComplete: false,   // Finished the dump phase (now in recovery)
-    dumpDepth: 0,          // How deep the dump will go (% drop)
-    recoveryStrength: 0,   // How strong the recovery will be
-    dumpCounter: 0,        // Counter for dump duration
-    recoveryCounter: 0,    // Counter for recovery duration
-    ticksSinceDump: 0      // Ticks since last dump event
+    inDump: false,         // Currently in a dump phase (for uptrend) or pump phase (for downtrend)
+    dumpComplete: false,   // Finished the dump/pump phase (now in recovery/correction)
+    dumpDepth: 0,          // How deep the dump/pump will go (% change)
+    recoveryStrength: 0,   // How strong the recovery/correction will be
+    dumpCounter: 0,        // Counter for dump/pump duration
+    recoveryCounter: 0,    // Counter for recovery/correction duration
+    ticksSinceDump: 0      // Ticks since last volatility event
   });
 
   // Initialize assets on mount
@@ -34,13 +34,36 @@ const CardStack: React.FC = () => {
     // Maximum reasonable market cap (10 billion)
     const MAX_MARKET_CAP = 10_000_000_000;
     
-    // Helper functions for volatility - modified for slower pace
-    const nextDumpDepth = () => 0.15 + (Math.random() * 0.25); // 15-40% drop (deeper than before)
-    const nextRecoveryStrength = (dumpDepth: number) => 
-      dumpDepth * (0.7 + (Math.random() * 0.4)); // 70-110% of dump (potential for incomplete recovery)
-    const getDumpDuration = () => 4 + Math.floor(Math.random() * 3); // 4-6 ticks (slower)
-    const getRecoveryDuration = () => 6 + Math.floor(Math.random() * 5); // 6-10 ticks (slower)
-    const getTicksBetweenDumps = () => 30 + Math.floor(Math.random() * 20); // 30-50 ticks (longer between)
+    // Minimum reasonable market cap (prevent going to zero)
+    const MIN_MARKET_CAP = 5_000;
+    
+    // Get current strategy
+    const isUptrendStrategy = activeAsset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
+    
+    // Helper functions for volatility - modified for different strategies
+    const nextVolatilityDepth = () => {
+      if (isUptrendStrategy) {
+        // For uptrend: 15-40% dumps
+        return 0.15 + (Math.random() * 0.25);
+      } else {
+        // For downtrend: 15-40% pumps
+        return 0.15 + (Math.random() * 0.25);
+      }
+    };
+    
+    const nextRecoveryStrength = (volatilityDepth: number) => {
+      if (isUptrendStrategy) {
+        // For uptrend: 70-110% recovery after dump (not always full recovery)
+        return volatilityDepth * (0.7 + (Math.random() * 0.4));
+      } else {
+        // For downtrend: 60-90% correction after pump (usually substantial correction)
+        return volatilityDepth * (0.6 + (Math.random() * 0.3));
+      }
+    };
+    
+    const getVolatilityDuration = () => 4 + Math.floor(Math.random() * 3); // 4-6 ticks for both strategies
+    const getRecoveryDuration = () => 6 + Math.floor(Math.random() * 5); // 6-10 ticks for both strategies
+    const getTicksBetweenEvents = () => 30 + Math.floor(Math.random() * 20); // 30-50 ticks between events
     
     const interval = setInterval(() => {
       // Update volatility state first
@@ -48,31 +71,31 @@ const CardStack: React.FC = () => {
         let newState = { ...prevState };
         newState.ticksSinceDump += 1;
         
-        // Check if we should start a new dump
+        // Check if we should start a new volatility event
         if (!newState.inDump && !newState.dumpComplete && 
-            newState.ticksSinceDump >= getTicksBetweenDumps()) {
-          // 20% chance of starting a dump when the counter hits (reduced from 25%)
+            newState.ticksSinceDump >= getTicksBetweenEvents()) {
+          // 20% chance of starting a volatility event when the counter hits
           if (Math.random() < 0.2) {
             newState.inDump = true;
-            newState.dumpDepth = nextDumpDepth();
-            newState.dumpCounter = getDumpDuration();
+            newState.dumpDepth = nextVolatilityDepth();
+            newState.dumpCounter = getVolatilityDuration();
             newState.recoveryStrength = nextRecoveryStrength(newState.dumpDepth);
             newState.ticksSinceDump = 0;
           }
         }
         
-        // Handle active dump phase
+        // Handle active volatility phase
         if (newState.inDump) {
           newState.dumpCounter -= 1;
           
-          // Check if dump is complete
+          // Check if volatility event is complete
           if (newState.dumpCounter <= 0) {
             newState.inDump = false;
             newState.dumpComplete = true;
             newState.recoveryCounter = getRecoveryDuration();
           }
         }
-        // Handle recovery phase
+        // Handle recovery/correction phase
         else if (newState.dumpComplete) {
           newState.recoveryCounter -= 1;
           
@@ -89,59 +112,98 @@ const CardStack: React.FC = () => {
       setActiveAsset(prevAsset => {
         if (!prevAsset) return null;
         
-        // Create a new data point showing continued upward movement
+        // Create a new data point showing continued movement based on strategy
         const lastPoint = prevAsset.chartData[prevAsset.chartData.length - 1];
         const newTimestamp = Date.now();
         
-        // Calculate growth factor - ensure continuous upward momentum
+        // Calculate growth factor based on strategy
         // More aggressive growth near the visible portion of the chart
         const visiblePoints = Math.floor(prevAsset.chartData.length * 0.75);
         const recentPoints = prevAsset.chartData.slice(-visiblePoints);
         
-        // Determine if there's been a plateau (less than 5% growth over last 5 points)
-        const plateauDetected = checkForPlateau(recentPoints);
+        // Determine if there's been a plateau (less than 5% change over last 5 points)
+        const plateauDetected = checkForPlateau(recentPoints, isUptrendStrategy);
         
         // Current market cap
         const currentMarketCap = lastPoint.marketCap;
         let newMarketCap = currentMarketCap;
         
-        // Handle active dump phase
+        // Handle active volatility phase
         if (volatilityState.inDump) {
-          // Calculate how much to drop this tick (distribute the dump over duration)
-          const dumpPercent = volatilityState.dumpDepth / volatilityState.dumpCounter;
-          newMarketCap = currentMarketCap * (1 - dumpPercent * 0.8); // 80% impact per tick (more impact)
-        }
-        // Handle recovery phase
-        else if (volatilityState.dumpComplete) {
-          // Calculate recovery amount for this tick (distribute over duration)
-          const recoveryPercent = volatilityState.recoveryStrength / volatilityState.recoveryCounter;
-          newMarketCap = currentMarketCap * (1 + recoveryPercent * 0.75); // 75% impact per tick (gradual recovery)
-        }
-        // Normal growth phase
-        else {
-          // If market cap is getting too large, drastically reduce growth
-          let growthFactor = 0;
+          // Calculate change for this tick
+          const volatilityPercent = volatilityState.dumpDepth / volatilityState.dumpCounter;
           
-          if (currentMarketCap > MAX_MARKET_CAP * 0.5) {
-            // If we're over 50% of max cap, severely limit growth
-            growthFactor = 0.0001 + (Math.random() * 0.0003); // Lower growth
-          } else if (currentMarketCap > MAX_MARKET_CAP * 0.1) {
-            // If we're over 10% of max cap, limit growth
-            growthFactor = 0.0005 + (Math.random() * 0.001); // Lower growth
-          } else if (plateauDetected) {
-            // If plateau, create a bigger movement to break out
-            growthFactor = Math.random() * 0.1 + 0.05; // 5-15% jump (less aggressive)
+          if (isUptrendStrategy) {
+            // For uptrend: dump means price drop
+            newMarketCap = currentMarketCap * (1 - volatilityPercent * 0.8);
           } else {
-            // Normal growth - still always positive
-            growthFactor = Math.random() * 0.03 + 0.02; // 2-5% per tick (slower overall)
+            // For downtrend: dump means price pump
+            newMarketCap = currentMarketCap * (1 + volatilityPercent * 0.8);
           }
+        }
+        // Handle recovery/correction phase
+        else if (volatilityState.dumpComplete) {
+          // Calculate recovery amount for this tick
+          const recoveryPercent = volatilityState.recoveryStrength / volatilityState.recoveryCounter;
           
-          // Calculate new market cap with growth factor
-          newMarketCap = currentMarketCap * (1 + growthFactor);
+          if (isUptrendStrategy) {
+            // For uptrend: recovery means price increase
+            newMarketCap = currentMarketCap * (1 + recoveryPercent * 0.75);
+          } else {
+            // For downtrend: recovery means price decrease (correction)
+            newMarketCap = currentMarketCap * (1 - recoveryPercent * 0.75);
+          }
+        }
+        // Normal movement phase
+        else {
+          if (isUptrendStrategy) {
+            // UPTREND STRATEGY: Normal upward growth
+            let growthFactor = 0;
+            
+            if (currentMarketCap > MAX_MARKET_CAP * 0.5) {
+              // If we're over 50% of max cap, severely limit growth
+              growthFactor = 0.0001 + (Math.random() * 0.0003);
+            } else if (currentMarketCap > MAX_MARKET_CAP * 0.1) {
+              // If we're over 10% of max cap, limit growth
+              growthFactor = 0.0005 + (Math.random() * 0.001);
+            } else if (plateauDetected) {
+              // If plateau, create a bigger movement to break out
+              growthFactor = Math.random() * 0.1 + 0.05; // 5-15% jump
+            } else {
+              // Normal growth - still always positive
+              growthFactor = Math.random() * 0.03 + 0.02; // 2-5% per tick
+            }
+            
+            // Calculate new market cap with growth factor
+            newMarketCap = currentMarketCap * (1 + growthFactor);
+          } else {
+            // DOWNTREND STRATEGY: Normal downward movement
+            let dropFactor = 0;
+            
+            if (currentMarketCap < MIN_MARKET_CAP * 2) {
+              // If we're close to minimum, limit further drops
+              dropFactor = 0.0001 + (Math.random() * 0.0005);
+            } else if (plateauDetected) {
+              // If plateau, create a bigger movement to break out downward
+              dropFactor = Math.random() * 0.08 + 0.04; // 4-12% drop
+            } else {
+              // Normal drop - still generally negative
+              dropFactor = Math.random() * 0.025 + 0.015; // 1.5-4% per tick
+            }
+            
+            // Calculate new market cap with drop factor
+            newMarketCap = currentMarketCap * (1 - dropFactor);
+            
+            // Occasional mini-pumps (5% chance) to create hope
+            if (Math.random() < 0.05) {
+              newMarketCap *= (1 + Math.random() * 0.06); // 0-6% mini pump
+            }
+          }
         }
         
-        // Enforce maximum market cap
+        // Enforce limits
         newMarketCap = Math.min(newMarketCap, MAX_MARKET_CAP);
+        newMarketCap = Math.max(newMarketCap, MIN_MARKET_CAP);
         
         // Add new point and remove oldest to keep a moving window
         const newChartData = [...prevAsset.chartData.slice(1), {
@@ -160,23 +222,41 @@ const CardStack: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeAsset, volatilityState]);
 
-  // Helper function to detect plateau
-  const checkForPlateau = (points: Array<{marketCap: number}>): boolean => {
+  // Helper function to detect plateau based on strategy
+  const checkForPlateau = (points: Array<{marketCap: number}>, isUptrend: boolean): boolean => {
     if (points.length < 5) return false;
     
     const last5Points = points.slice(-5);
     const startPrice = last5Points[0].marketCap;
     const endPrice = last5Points[last5Points.length - 1].marketCap;
     
-    // If growth is less than 5% over last 5 points, consider it a plateau
-    const growth = (endPrice - startPrice) / startPrice;
-    return growth < 0.05;
+    // Calculate growth/drop as percentage
+    const changePercent = (endPrice - startPrice) / startPrice;
+    
+    if (isUptrend) {
+      // For uptrend: plateau means not enough growth (less than 5%)
+      return changePercent < 0.05;
+    } else {
+      // For downtrend: plateau means not enough drop (less than 5%)
+      return changePercent > -0.05;
+    }
   };
 
   // When moving to the next card, update the active asset
   useEffect(() => {
     if (assets.length > currentIndex) {
       setActiveAsset(assets[currentIndex]);
+      
+      // Reset volatility state for the new asset
+      setVolatilityState({
+        inDump: false,
+        dumpComplete: false,
+        dumpDepth: 0,
+        recoveryStrength: 0,
+        dumpCounter: 0,
+        recoveryCounter: 0,
+        ticksSinceDump: 0
+      });
     }
   }, [currentIndex, assets]);
 

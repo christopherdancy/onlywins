@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
-import { Asset } from '../types';
+import { Asset, ChartStrategy } from '../types';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -61,10 +61,13 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
     setDisplayPrice(asset.currentMarketCap);
   }, [asset.currentMarketCap]);
   
-  // Calculate percentage increase
+  // Determine if we're in uptrend or downtrend strategy
+  const isUptrendStrategy = asset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
+  
+  // Calculate percentage change (from start to current)
   const startMarketCap = asset.chartData[0].marketCap;
   const currentMarketCap = asset.currentMarketCap;
-  const percentIncrease = ((currentMarketCap - startMarketCap) / startMarketCap) * 100;
+  const percentChange = ((currentMarketCap - startMarketCap) / startMarketCap) * 100;
   
   // Get min and max market cap for scale - only from visible portion (80%)
   const visibleDataCount = Math.floor(asset.chartData.length * 0.8);
@@ -72,15 +75,28 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
   const minMarketCap = Math.min(...visibleData.map(point => point.marketCap));
   const maxMarketCap = Math.max(...visibleData.map(point => point.marketCap));
 
-  // Detect if we're currently in a dump (significant price drop)
+  // Detect significant price movements based on strategy
   const lastFewMarketCaps = asset.chartData.slice(-4).map(point => point.marketCap);
-  const isInDump = lastFewMarketCaps.length >= 2 && 
-    lastFewMarketCaps[lastFewMarketCaps.length - 1] < lastFewMarketCaps[lastFewMarketCaps.length - 2] * 0.95;
   
-  // Detect if we're in a recovery (bouncing back after a drop)
-  const isInRecovery = lastFewMarketCaps.length >= 3 && 
-    lastFewMarketCaps[lastFewMarketCaps.length - 1] > lastFewMarketCaps[lastFewMarketCaps.length - 2] * 1.05 &&
-    lastFewMarketCaps[lastFewMarketCaps.length - 2] < lastFewMarketCaps[lastFewMarketCaps.length - 3] * 0.95;
+  // For uptrend: detect dumps (significant price drop)
+  // For downtrend: detect pumps (significant price increase)
+  const isInVolatilityEvent = lastFewMarketCaps.length >= 2 && (
+    (isUptrendStrategy && 
+      lastFewMarketCaps[lastFewMarketCaps.length - 1] < lastFewMarketCaps[lastFewMarketCaps.length - 2] * 0.95) ||
+    (!isUptrendStrategy && 
+      lastFewMarketCaps[lastFewMarketCaps.length - 1] > lastFewMarketCaps[lastFewMarketCaps.length - 2] * 1.05)
+  );
+  
+  // For uptrend: detect recovery from dump
+  // For downtrend: detect correction from pump
+  const isInRecoveryEvent = lastFewMarketCaps.length >= 3 && (
+    (isUptrendStrategy && 
+      lastFewMarketCaps[lastFewMarketCaps.length - 1] > lastFewMarketCaps[lastFewMarketCaps.length - 2] * 1.05 &&
+      lastFewMarketCaps[lastFewMarketCaps.length - 2] < lastFewMarketCaps[lastFewMarketCaps.length - 3] * 0.95) ||
+    (!isUptrendStrategy && 
+      lastFewMarketCaps[lastFewMarketCaps.length - 1] < lastFewMarketCaps[lastFewMarketCaps.length - 2] * 0.95 &&
+      lastFewMarketCaps[lastFewMarketCaps.length - 2] > lastFewMarketCaps[lastFewMarketCaps.length - 3] * 1.05)
+  );
 
   // Prepare chart price labels (just 4 evenly spaced ones)
   const priceSteps = [];
@@ -95,15 +111,14 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
     // Calculate the number of points to show (75% of the data)
     const visibleDataCount = Math.floor(asset.chartData.length * 0.75);
     
-    // Always ensure the last few points are trending upward for FOMO
+    // Get visible data points
     let visibleData = [...asset.chartData].slice(-visibleDataCount);
     
-    // Ensure the last few points are always trending upward
-    const lastFewPoints = visibleData.slice(-5);
-    for (let i = 1; i < lastFewPoints.length; i++) {
-      // Make sure each point is at least 2% higher than the previous
-      // But skip this during dump phase to allow drops
-      if (!isInDump) {
+    // For uptrend strategy, we want to ensure the last few points are trending upward
+    if (isUptrendStrategy && !isInVolatilityEvent) {
+      const lastFewPoints = visibleData.slice(-5);
+      for (let i = 1; i < lastFewPoints.length; i++) {
+        // Make sure each point is at least 2% higher than the previous
         const minValue = lastFewPoints[i-1].marketCap * 1.02;
         if (lastFewPoints[i].marketCap < minValue) {
           lastFewPoints[i] = {
@@ -112,11 +127,8 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
           };
         }
       }
-    }
-    
-    // Make the last point (current price) positioned at approximately 75% of vertical height too
-    // But skip during dumps to allow the drop to be visible
-    if (!isInDump) {
+      
+      // Make the last point positioned at approximately 75% of vertical height
       const lastPoint = lastFewPoints[lastFewPoints.length - 1];
       const verticalTarget = minMarketCap + (maxMarketCap - minMarketCap) * 0.75;
       
@@ -124,10 +136,57 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
       if (lastPoint.marketCap < verticalTarget) {
         lastPoint.marketCap = verticalTarget;
       }
+      
+      // Replace the last few points in the visibleData
+      visibleData.splice(-5, 5, ...lastFewPoints);
+    }
+    // For downtrend strategy, we want to ensure the last few points are trending downward
+    else if (!isUptrendStrategy && !isInVolatilityEvent) {
+      const lastFewPoints = visibleData.slice(-5);
+      for (let i = 1; i < lastFewPoints.length; i++) {
+        // Make sure each point is at least 1.5% lower than the previous
+        const maxValue = lastFewPoints[i-1].marketCap * 0.985;
+        if (lastFewPoints[i].marketCap > maxValue) {
+          lastFewPoints[i] = {
+            ...lastFewPoints[i],
+            marketCap: maxValue
+          };
+        }
+      }
+      
+      // Make the last point positioned at approximately 25% of vertical height
+      const lastPoint = lastFewPoints[lastFewPoints.length - 1];
+      const verticalTarget = minMarketCap + (maxMarketCap - minMarketCap) * 0.25;
+      
+      // Only adjust if needed - ensure it's not higher than current value
+      if (lastPoint.marketCap > verticalTarget) {
+        lastPoint.marketCap = verticalTarget;
+      }
+      
+      // Replace the last few points in the visibleData
+      visibleData.splice(-5, 5, ...lastFewPoints);
     }
     
-    // Replace the last few points in the visibleData
-    visibleData.splice(-5, 5, ...lastFewPoints);
+    // Determine chart colors based on strategy and current state
+    let lineColor = '#4bc0c0'; // Default teal color
+    
+    if (isUptrendStrategy) {
+      // Uptrend strategy colors
+      if (isInVolatilityEvent) {
+        lineColor = '#ff6b6b'; // Red for dumps
+      } else if (isInRecoveryEvent) {
+        lineColor = '#00bf63'; // Green for recovery
+      }
+    } else {
+      // Downtrend strategy colors
+      if (isInVolatilityEvent) {
+        lineColor = '#00bf63'; // Green for pumps
+      } else if (isInRecoveryEvent) {
+        lineColor = '#ff6b6b'; // Red for corrections
+      } else {
+        lineColor = '#ff6b6b'; // Red for general downtrend
+      }
+    }
     
     return {
       labels: asset.chartData.map(point => {
@@ -139,22 +198,24 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
           label: asset.symbol,
           data: visibleData.map(point => point.marketCap),
           fill: true,
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          borderColor: isInDump ? '#ff6b6b' : isInRecovery ? '#00bf63' : '#4bc0c0',
+          backgroundColor: isUptrendStrategy 
+            ? 'rgba(75, 192, 192, 0.2)' 
+            : 'rgba(255, 107, 107, 0.2)',
+          borderColor: lineColor,
           tension: 0.3,
           pointHoverRadius: 0,
           borderWidth: 2,
           // Add point styling to show only the last point
           pointBackgroundColor: function(context: {dataIndex: number, dataset: {data: any[]}}) {
-            // Only show the last point (at 75% of the chart)
+            // Only show the last point (at the end of the chart)
             const index = context.dataIndex;
             const count = context.dataset.data.length;
-            return index === count - 1 ? (isInDump ? '#ff6b6b' : isInRecovery ? '#00bf63' : '#4bc0c0') : 'transparent';
+            return index === count - 1 ? lineColor : 'transparent';
           },
           pointBorderColor: function(context: {dataIndex: number, dataset: {data: any[]}}) {
             const index = context.dataIndex;
             const count = context.dataset.data.length;
-            return index === count - 1 ? (isInDump ? '#ff6b6b' : isInRecovery ? '#00bf63' : '#4bc0c0') : 'transparent';
+            return index === count - 1 ? lineColor : 'transparent';
           },
           pointRadius: function(context: {dataIndex: number, dataset: {data: any[]}}) {
             const index = context.dataIndex;
@@ -169,9 +230,9 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
         },
       ],
     };
-  }, [asset, minMarketCap, maxMarketCap, isInDump, isInRecovery]);
+  }, [asset, minMarketCap, maxMarketCap, isUptrendStrategy, isInVolatilityEvent, isInRecoveryEvent]);
 
-  // Effect to position the price bubble at the exact position of the last visible data point (75%)
+  // Effect to position the price bubble at the exact position of the last visible data point
   useEffect(() => {
     if (!chartContainerRef.current || !priceBubbleRef.current || !chartRef.current) return;
     
@@ -187,7 +248,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
       const datasetMeta = chart.getDatasetMeta(0);
       
       if (chart.scales && datasetMeta && datasetMeta.data.length > 0) {
-        // Get the position of the last visible data point (at 75% mark)
+        // Get the position of the last visible data point
         const count = datasetMeta.data.length;
         const lastVisiblePoint = datasetMeta.data[count - 1];
         
@@ -250,6 +311,26 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
     };
   }, [asset.chartData, minMarketCap, maxMarketCap]);
 
+  // Determine CSS classes for price bubble based on the strategy and current state
+  const priceBubbleClasses = [];
+  if (isUptrendStrategy) {
+    if (isInVolatilityEvent) priceBubbleClasses.push('price-dropping');
+    else if (isInRecoveryEvent) priceBubbleClasses.push('price-recovering');
+  } else {
+    if (isInVolatilityEvent) priceBubbleClasses.push('price-recovering');
+    else if (isInRecoveryEvent) priceBubbleClasses.push('price-dropping');
+  }
+
+  // Determine CSS classes for change badge based on strategy and current state
+  const changeBadgeClasses = [];
+  if (isUptrendStrategy) {
+    if (isInVolatilityEvent) changeBadgeClasses.push('dropping');
+    else if (isInRecoveryEvent) changeBadgeClasses.push('recovering');
+  } else {
+    if (isInVolatilityEvent) changeBadgeClasses.push('recovering');
+    else if (isInRecoveryEvent) changeBadgeClasses.push('dropping');
+  }
+
   return (
     <div className="chart-card">
 
@@ -261,7 +342,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
         {/* Current price highlight - positioned at the end of the visible chart */}
         <div className="current-price-indicator">
           <div 
-            className={`current-price-bubble ${isInDump ? 'price-dropping' : isInRecovery ? 'price-recovering' : ''}`} 
+            className={`current-price-bubble ${priceBubbleClasses.join(' ')}`} 
             ref={priceBubbleRef}
           >
             {formatSimplifiedPrice(displayPrice)}
@@ -289,10 +370,14 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
           </div>
         </div>
         <div 
-          className={`change-badge ${isInDump ? 'dropping' : isInRecovery ? 'recovering' : ''}`}
-          style={{ color: percentIncrease > 0 ? '#4bc0c0' : '#ff6b6b' }}
+          className={`change-badge ${changeBadgeClasses.join(' ')}`}
+          style={{ 
+            color: isUptrendStrategy 
+              ? (percentChange > 0 ? '#4bc0c0' : '#ff6b6b') 
+              : (percentChange > 0 ? '#4bc0c0' : '#ff6b6b')
+          }}
         >
-          {percentIncrease > 0 ? '+' : ''}{percentIncrease.toFixed(2)}%
+          {percentChange > 0 ? '+' : ''}{percentChange.toFixed(2)}%
         </div>
       </div>
     </div>
