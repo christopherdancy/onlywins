@@ -148,7 +148,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
       {/* Live Trade Indicator */}
       {activeTrade && (
         <div className="live-trade-indicator">
-          LIVE
+          LOCKED IN
         </div>
       )}
       

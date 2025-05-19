@@ -307,8 +307,11 @@ const CardStack: React.FC = () => {
     const currentPrice = activeAsset.currentMarketCap;
     const profitPercent = (currentPrice - avgEntryPrice) / avgEntryPrice;
     
-    // Calculate return amount (minimum return is 10% of investment)
-    const returnAmount = Math.max(activeTrade.totalInvestment * (1 + profitPercent), activeTrade.totalInvestment * 0.1);
+    // Calculate final position value based on current price
+    const positionValue = activeTrade.totalInvestment * (1 + profitPercent);
+    
+    // Use position value as return amount (minimum return is 10% of investment)
+    const returnAmount = Math.max(positionValue, activeTrade.totalInvestment * 0.1);
     
     // Update wallet balance
     updateBalance(returnAmount);

@@ -314,7 +314,7 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.3rem;
 }
 
 .token-header {
@@ -876,4 +876,35 @@ body, html {
 @keyframes fadeOut {
   from { opacity: 1; transform: translate(-50%, -50%); }
   to { opacity: 0; transform: translate(-50%, -40%); }
+}
+
+/* Token holdings display */
+.token-holdings {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: #b8b8c8;
+  margin-top: -2px;
+  margin-left: 2px;
+}
+
+.token-quantity {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 500;
+}
+
+.token-symbol {
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #928fa8;
+}
+
+/* In active trades, make holdings more prominent */
+.in-trade .token-holdings {
+  color: #fff;
+}
+
+.in-trade .token-symbol {
+  color: #c0c0d0;
 }

@@ -332,6 +332,77 @@ const ChartCard: React.FC<ChartCardProps> = ({
     priceBubbleClasses.push('price-recovering');
   }
   
+  // Calculate current position value if in a trade
+  const positionValue = useMemo(() => {
+    if (!activeTotalInvestment || !avgEntryPrice || !asset) return null;
+    
+    // Calculate the current value of the position
+    const currentPrice = asset.currentMarketCap;
+    const entryToCurrentRatio = currentPrice / avgEntryPrice;
+    return activeTotalInvestment * entryToCurrentRatio;
+  }, [activeTotalInvestment, avgEntryPrice, asset]);
+
+  // Calculate token quantity based on investment and price
+  const tokenQuantity = useMemo(() => {
+    if (!activeTotalInvestment || !avgEntryPrice) return null;
+    
+    // Scale factor based on market cap to make numbers more realistic
+    // Higher market cap = smaller token amounts, lower market cap = larger token amounts
+    let scaleFactor = 1;
+    
+    if (avgEntryPrice >= 1_000_000) {
+      // For high market cap tokens (>$1M), multiply by a smaller factor
+      scaleFactor = 100 / Math.sqrt(avgEntryPrice / 1_000_000);
+    } else if (avgEntryPrice >= 100_000) {
+      // Medium high market cap
+      scaleFactor = 1_000 / Math.sqrt(avgEntryPrice / 100_000);
+    } else if (avgEntryPrice >= 10_000) {
+      // Medium market cap
+      scaleFactor = 10_000 / Math.sqrt(avgEntryPrice / 10_000);
+    } else if (avgEntryPrice >= 1_000) {
+      // Lower market cap
+      scaleFactor = 100_000 / Math.sqrt(avgEntryPrice / 1_000);
+    } else {
+      // Very low market cap, get lots of tokens
+      scaleFactor = 1_000_000 / Math.sqrt(avgEntryPrice);
+    }
+    
+    // Calculate how many tokens based on investment and scale factor
+    const tokens = activeTotalInvestment * scaleFactor;
+    
+    // Format with appropriate rounding based on value
+    if (tokens < 1) {
+      // Unlikely with new scaling, but just in case
+      return tokens.toFixed(2);
+    } else if (tokens < 1000) {
+      // Round to whole number for small amounts
+      return Math.round(tokens).toLocaleString();
+    } else if (tokens < 1_000_000) {
+      // For thousands, round to nearest 10
+      return Math.round(tokens / 10) * 10 >= 100000 
+        ? `${(Math.round(tokens / 1000) / 10).toFixed(1)}K` 
+        : Math.round(tokens / 10) * 10 >= 10000
+          ? `${Math.round(tokens / 100) / 10}K`
+          : Math.round(tokens / 10) * 10 >= 1000
+            ? `${Math.round(tokens / 10) * 10}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+            : `${Math.round(tokens / 10) * 10}`;
+    } else if (tokens < 10_000_000) {
+      // For millions, round to nearest 1000
+      return `${Math.round(tokens / 1000)}K`;
+    } else if (tokens < 1_000_000_000) {
+      // For 10M+, round to nearest 10000
+      return `${Math.round(tokens / 10000) / 100}M`;
+    } else {
+      // For billions+, round to nearest million
+      return `${Math.round(tokens / 1000000) / 1000}B`;
+    }
+  }, [activeTotalInvestment, avgEntryPrice]);
+
+  // Format displayed price and trading info
+  const formattedDisplayPrice = useMemo(() => formatSimplifiedPrice(displayPrice), [displayPrice]);
+  const formattedAvgEntryPrice = useMemo(() => avgEntryPrice ? formatSimplifiedPrice(avgEntryPrice) : '', [avgEntryPrice]);
+  const formattedPositionValue = useMemo(() => positionValue ? `$${positionValue.toFixed(2)}` : '', [positionValue]);
+
   // Chart options with annotations
   const chartOptions: ChartOptions<'line'> = {
     responsive: true,
@@ -362,7 +433,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
               drawTime: 'afterDatasetsDraw',
               label: {
                 display: true,
-                content: `Entry: ${formatSimplifiedPrice(avgEntryPrice)}`,
+                content: `Entry: ${formattedAvgEntryPrice}`,
                 position: 'start',
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 color: '#FFD700',
@@ -433,11 +504,18 @@ const ChartCard: React.FC<ChartCardProps> = ({
             <img src={asset.iconUrl} alt={asset.symbol} className="token-icon" />
             <h2>{asset.name}</h2>
           </div>
+          {/* Show token holdings for active trades */}
+          {isActiveTrade && tokenQuantity && (
+            <div className="token-holdings">
+              <span className="token-quantity">{tokenQuantity}</span>
+              <span className="token-symbol">{asset.symbol}</span>
+            </div>
+          )}
         </div>
         {/* Conditionally show either active trade info or 30-second price change */}
         {isActiveTrade && profitLossPercent !== undefined ? (
           <div className={`active-trade-info ${profitLossPercent >= 0 ? 'profit' : 'loss'}`}>
-            <div className="investment-amount">${activeTotalInvestment?.toFixed(2)}</div>
+            <div className="investment-amount">{formattedPositionValue}</div>
             <div className="profit-loss">
               {profitLossPercent >= 0 ? '+' : ''}{profitLossPercent.toFixed(2)}%
             </div>
@@ -487,7 +565,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           ref={priceBubbleRef} 
           className={`current-price-bubble ${priceBubbleClasses.join(' ')}`}
         >
-          {formatSimplifiedPrice(displayPrice)}
+          {formattedDisplayPrice}
         </div>
       </div>
     </div>
