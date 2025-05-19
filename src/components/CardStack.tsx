@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import SwipeableCard from './SwipeableCard';
 import { Asset, SwipeDirection, ChartStrategy, ActiveTrade } from '../types';
 import { generateAssetCollection, generateRandomAsset } from '../utils/chartUtils';
@@ -7,8 +7,9 @@ import { useWallet } from '../contexts/WalletContext';
 const CardStack: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showMatch, setShowMatch] = useState(false);
   const [activeAsset, setActiveAsset] = useState<Asset | null>(null);
-  const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
+  const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null); // Track active trade
   const { updateBalance } = useWallet();
   const [volatilityState, setVolatilityState] = useState({
     inDump: false,         // Currently in a dump phase (for uptrend) or pump phase (for downtrend)
@@ -266,13 +267,18 @@ const CardStack: React.FC = () => {
   const handleTradeEntry = () => {
     if (!activeAsset) return;
     
+    const EXPIRY_DURATION = 30000; // 30 seconds in milliseconds
+    const now = Date.now();
+    
     if (activeTrade && activeTrade.assetId === activeAsset.id) {
       // Double down - add another $1 investment
       updateBalance(-1); // Deduct from wallet
       setActiveTrade({
         ...activeTrade,
         entryPrices: [...activeTrade.entryPrices, activeAsset.currentMarketCap],
-        totalInvestment: activeTrade.totalInvestment + 1
+        totalInvestment: activeTrade.totalInvestment + 1,
+        // Reset expiry time on double down to give more time
+        expiryTime: now + EXPIRY_DURATION
       });
     } else {
       // New trade entry
@@ -281,13 +287,18 @@ const CardStack: React.FC = () => {
         assetId: activeAsset.id,
         entryPrices: [activeAsset.currentMarketCap],
         totalInvestment: 1,
-        entryTime: Date.now()
+        entryTime: now,
+        expiryTime: now + EXPIRY_DURATION
       });
     }
+    
+    // Show match notification
+    // setShowMatch(true);
+    // setTimeout(() => setShowMatch(false), 1500);
   };
   
-  // Handle trade exit and calculate profits
-  const handleTradeExit = () => {
+  // Handle trade exit and calculate profits - wrap in useCallback
+  const handleTradeExit = useCallback(() => {
     if (!activeAsset || !activeTrade || activeTrade.assetId !== activeAsset.id) return;
     
     // Calculate profit/loss
@@ -307,7 +318,43 @@ const CardStack: React.FC = () => {
     
     // Move to next asset
     setCurrentIndex(prevIndex => prevIndex + 1);
-  };
+  }, [activeAsset, activeTrade, updateBalance, setActiveTrade, setCurrentIndex]);
+
+  // Add effect to check for trade expiries
+  useEffect(() => {
+    if (!activeTrade || !activeAsset) return;
+    
+    const checkExpiry = () => {
+      const now = Date.now();
+      if (activeTrade && now >= activeTrade.expiryTime) {
+        // Automatically exit the trade when it expires
+        handleTradeExit();
+        
+        // Show a notification that the trade expired
+        const notification = document.createElement('div');
+        notification.className = 'expiry-notification';
+        notification.innerHTML = `
+          <div class="expiry-message">Position Expired</div>
+        `;
+        document.body.appendChild(notification);
+        
+        // Remove notification after animation completes
+        setTimeout(() => {
+          notification.classList.add('fade-out');
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.parentNode.removeChild(notification);
+            }
+          }, 500);
+        }, 1500);
+      }
+    };
+    
+    // Check every 100ms for more responsive expiry
+    const interval = setInterval(checkExpiry, 100);
+    
+    return () => clearInterval(interval);
+  }, [activeTrade, activeAsset, handleTradeExit]);
 
   const handleSwiped = (direction: SwipeDirection) => {
     if (!activeAsset) return;
@@ -355,6 +402,14 @@ const CardStack: React.FC = () => {
           onSwiped={handleSwiped}
           activeTrade={hasActiveTrade ? activeTrade : null}
         />
+      )}
+
+      {/* Match notification */}
+      {showMatch && (
+        <div className="match-notification">
+          <h2>It's a match!</h2>
+          <p>{hasActiveTrade ? 'Double Down!' : 'You\'re in the trade!'}</p>
+        </div>
       )}
 
       {/* End of stack notification */}

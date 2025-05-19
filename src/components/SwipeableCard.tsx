@@ -141,6 +141,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
         avgEntryPrice={activeTrade ? avgEntryPrice : undefined}
         activeTotalInvestment={activeTrade ? activeTrade.totalInvestment : undefined}
         profitLossPercent={activeTrade ? profitLossPercent : undefined}
+        expiryTime={activeTrade ? activeTrade.expiryTime : undefined}
       />
     </div>
   );

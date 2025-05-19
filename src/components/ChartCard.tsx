@@ -31,6 +31,7 @@ interface ChartCardProps {
   avgEntryPrice?: number; // Optional average entry price for active trades
   activeTotalInvestment?: number; // Optional total investment for active trades
   profitLossPercent?: number; // Optional profit/loss percentage for active trades
+  expiryTime?: number; // Optional expiry time for active trades
 }
 
 // Helper function for simplified k-notation
@@ -55,22 +56,52 @@ const formatSimplifiedPrice = (value: number): string => {
   return `$${value.toFixed(2)}`;
 };
 
+// Helper function to format time as MM:SS
+const formatTimeRemaining = (milliseconds: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
 const ChartCard: React.FC<ChartCardProps> = ({ 
   asset, 
   avgEntryPrice, 
   activeTotalInvestment, 
-  profitLossPercent 
+  profitLossPercent,
+  expiryTime
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const priceBubbleRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const [displayPrice, setDisplayPrice] = useState(asset.currentMarketCap);
   const [lastIntervalChange, setLastIntervalChange] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   
   // Update display price when asset changes
   useEffect(() => {
     setDisplayPrice(asset.currentMarketCap);
   }, [asset.currentMarketCap]);
+  
+  // Update time remaining if in a trade with expiry
+  useEffect(() => {
+    if (!expiryTime) {
+      setTimeRemaining(null);
+      return;
+    }
+    
+    const updateTimeRemaining = () => {
+      const now = Date.now();
+      const remaining = expiryTime - now;
+      setTimeRemaining(Math.max(0, remaining));
+    };
+    
+    // Update immediately and then every 1000ms
+    updateTimeRemaining();
+    const interval = setInterval(updateTimeRemaining, 1000);
+    
+    return () => clearInterval(interval);
+  }, [expiryTime]);
   
   // Update last-interval price change once every 30 seconds
   useEffect(() => {
@@ -135,110 +166,97 @@ const ChartCard: React.FC<ChartCardProps> = ({
     priceSteps.push(maxMarketCap - (priceRange * i / 3));
   }
   
-  // Prepare data for Chart.js
+  // Prepare chart data with extended projection for expiry
   const chartData = useMemo(() => {
-    // Calculate the number of points to show (75% of the data)
-    const visibleDataCount = Math.floor(asset.chartData.length * 0.75);
-    
-    // Get visible data points - use actual 75% of data points
-    let visibleData = [...asset.chartData].slice(-visibleDataCount);
-    
-    // For uptrend strategy, we want to ensure the last few points are trending upward
-    if (isUptrendStrategy && !isInVolatilityEvent) {
-      const lastFewPoints = visibleData.slice(-5);
-      for (let i = 1; i < lastFewPoints.length; i++) {
-        // Make sure each point is at least 2% higher than the previous
-        const minValue = lastFewPoints[i-1].marketCap * 1.02;
-        if (lastFewPoints[i].marketCap < minValue) {
-          lastFewPoints[i] = {
-            ...lastFewPoints[i],
-            marketCap: minValue
-          };
-        }
-      }
-      
-      // Make the last point positioned at approximately 75% of vertical height
-      const lastPoint = lastFewPoints[lastFewPoints.length - 1];
-      const verticalTarget = minMarketCap + (maxMarketCap - minMarketCap) * 0.75;
-      
-      // Only adjust if needed - ensure it's not lower than current value
-      if (lastPoint.marketCap < verticalTarget) {
-        lastPoint.marketCap = verticalTarget;
-      }
-      
-      // Replace the last few points in the visibleData
-      visibleData.splice(-5, 5, ...lastFewPoints);
-    }
-    // For downtrend strategy, we want to ensure the last few points are trending downward
-    else if (!isUptrendStrategy && !isInVolatilityEvent) {
-      const lastFewPoints = visibleData.slice(-5);
-      for (let i = 1; i < lastFewPoints.length; i++) {
-        // Make sure each point is at least 1.5% lower than the previous
-        const maxValue = lastFewPoints[i-1].marketCap * 0.985;
-        if (lastFewPoints[i].marketCap > maxValue) {
-          lastFewPoints[i] = {
-            ...lastFewPoints[i],
-            marketCap: maxValue
-          };
-        }
-      }
-      
-      // Make the last point positioned at approximately 25% of vertical height
-      const lastPoint = lastFewPoints[lastFewPoints.length - 1];
-      const verticalTarget = minMarketCap + (maxMarketCap - minMarketCap) * 0.25;
-      
-      // Only adjust if needed - ensure it's not higher than current value
-      if (lastPoint.marketCap > verticalTarget) {
-        lastPoint.marketCap = verticalTarget;
-      }
-      
-      // Replace the last few points in the visibleData
-      visibleData.splice(-5, 5, ...lastFewPoints);
-    }
-    
-    // Determine chart colors based on strategy and current state
-    let lineColor = '#4bc0c0'; // Default teal color
-    
-    if (isUptrendStrategy) {
-      // Uptrend strategy colors
-      if (isInVolatilityEvent) {
-        lineColor = '#ff6b6b'; // Red for dumps
-      } else if (isInRecoveryEvent) {
-        lineColor = '#00bf63'; // Green for recovery
-      }
-    } else {
-      // Downtrend strategy colors
-      if (isInVolatilityEvent) {
-        lineColor = '#00bf63'; // Green for pumps
-      } else if (isInRecoveryEvent) {
-        lineColor = '#ff6b6b'; // Red for corrections
-      } else {
-        lineColor = '#ff6b6b'; // Red for general downtrend
-      }
-    }
-    
-    // Create labels (timestamps) for x-axis
-    const labels = visibleData.map(point => new Date(point.timestamp).toISOString());
-    
-    return {
-      labels,
+    if (!asset) return {
+      labels: [],
       datasets: [
         {
-          label: asset.symbol,
-          data: visibleData.map(point => point.marketCap),
-          fill: true,
-          backgroundColor: isUptrendStrategy 
-            ? 'rgba(75, 192, 192, 0.1)' 
-            : 'rgba(255, 107, 107, 0.1)',
-          borderColor: lineColor,
-          borderWidth: 2,
+          label: '',
+          data: [],
+          fill: false,
+          borderColor: '#4bc0c0',
+          borderWidth: 3,
           tension: 0.3,
           pointRadius: 0,
           pointHoverRadius: 0,
         }
       ]
     };
-  }, [asset, minMarketCap, maxMarketCap, isInVolatilityEvent, isInRecoveryEvent, isUptrendStrategy]);
+    
+    const isUptrendStrategy = asset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
+    
+    // Determine uptrend/downtrend styling
+    const lineColor = isUptrendStrategy ? 
+      (isInVolatilityEvent ? '#ff6b6b' : '#4bc0c0') : 
+      (isInRecoveryEvent ? '#4bc0c0' : '#ff6b6b');
+    
+    // Get only the needed number of points for display
+    const visibleDataCount = Math.floor(asset.chartData.length * 0.75);
+    const visibleData = [...asset.chartData].slice(-visibleDataCount);
+    
+    // Prepare labels and data values
+    const labels = visibleData.map((_, i) => i.toString());
+    const dataValues = visibleData.map(point => point.marketCap);
+    
+    // Ensure the last points are accelerating properly
+    // For uptrend: make sure last points are trending up
+    // For downtrend: make sure last points are trending down
+    const pointsToAdjust = 5; // Last 5 points
+    if (visibleData.length >= pointsToAdjust) {
+      // No need to store last points since we're using them immediately
+      if (isUptrendStrategy && !isInVolatilityEvent) {
+        // Ensure last points trend upward
+        for (let i = dataValues.length - pointsToAdjust + 1; i < dataValues.length; i++) {
+          const prevPoint = dataValues[i - 1];
+          const idealIncrease = prevPoint * (0.01 + (i - (dataValues.length - pointsToAdjust) + 1) * 0.005);
+          dataValues[i] = Math.max(dataValues[i], prevPoint + idealIncrease);
+        }
+      }
+      else if (!isUptrendStrategy && !isInRecoveryEvent) {
+        // Ensure last points trend downward
+        for (let i = dataValues.length - pointsToAdjust + 1; i < dataValues.length; i++) {
+          const prevPoint = dataValues[i - 1];
+          const idealDecrease = prevPoint * (0.01 + (i - (dataValues.length - pointsToAdjust) + 1) * 0.005);
+          dataValues[i] = Math.min(dataValues[i], prevPoint - idealDecrease);
+        }
+      }
+    }
+    
+    // Adjust last point based on current market conditions
+    const lastIndex = dataValues.length - 1;
+    if (isInVolatilityEvent) {
+      // If we're in a dump, make last point lower
+      dataValues[lastIndex] = dataValues[lastIndex] * 0.97;
+    } else if (isInRecoveryEvent) {
+      // If we're in recovery, make last point higher
+      dataValues[lastIndex] = dataValues[lastIndex] * 1.03;
+    }
+    
+    return {
+      labels,
+      datasets: [
+        {
+          label: asset.name,
+          data: dataValues,
+          fill: false,
+          borderColor: lineColor,
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        }
+      ]
+    };
+  }, [asset, isInVolatilityEvent, isInRecoveryEvent]);
+
+  // Calculate expiry position for chart annotation
+  const expiryPosition = useMemo(() => {
+    if (!expiryTime || timeRemaining === null || !asset?.chartData?.length) return null;
+    
+    // Position is based on how much time is left relative to the 30-second duration
+    return asset.chartData.length + (timeRemaining / 30000) * asset.chartData.length * 0.3;
+  }, [asset?.chartData?.length, expiryTime, timeRemaining]);
 
   // Position the price bubble at the last visible point
   useEffect(() => {
@@ -314,7 +332,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
     priceBubbleClasses.push('price-recovering');
   }
   
-  // Chart options with entry price annotation if available
+  // Chart options with annotations
   const chartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -331,31 +349,56 @@ const ChartCard: React.FC<ChartCardProps> = ({
       tooltip: {
         enabled: false,
       },
-      annotation: avgEntryPrice ? {
+      annotation: {
         annotations: {
-          entryLine: {
-            type: 'line',
-            scaleID: 'y',
-            value: avgEntryPrice,
-            borderColor: '#FFD700',
-            borderWidth: 2,
-            borderDash: [5, 5],
-            drawTime: 'afterDatasetsDraw',
-            label: {
-              display: true,
-              content: `Entry: ${formatSimplifiedPrice(avgEntryPrice)}`,
-              position: 'start',
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              color: '#FFD700',
-              font: {
-                size: 12,
-                weight: 'bold'
-              },
-              padding: 6
+          ...(avgEntryPrice ? {
+            entryLine: {
+              type: 'line',
+              scaleID: 'y',
+              value: avgEntryPrice,
+              borderColor: '#FFD700',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              drawTime: 'afterDatasetsDraw',
+              label: {
+                display: true,
+                content: `Entry: ${formatSimplifiedPrice(avgEntryPrice)}`,
+                position: 'start',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                color: '#FFD700',
+                font: {
+                  size: 12,
+                  weight: 'bold'
+                },
+                padding: 6
+              }
             }
-          }
+          } : {}),
+          ...(expiryPosition !== null ? {
+            expiryLine: {
+              type: 'line',
+              scaleID: 'x',
+              value: expiryPosition,
+              borderColor: '#FF3B30',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              drawTime: 'afterDatasetsDraw',
+              label: {
+                display: true,
+                position: 'end',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: '#FF3B30',
+                font: {
+                  size: 11,
+                  weight: 'bold'
+                },
+                content: 'Expiry',
+                padding: 5
+              }
+            }
+          } : {})
         }
-      } : undefined
+      }
     },
     scales: {
       x: {
@@ -363,8 +406,9 @@ const ChartCard: React.FC<ChartCardProps> = ({
         grid: {
           display: false
         },
-        // Add 25% more space on the right for projection, but scale based on screen size
-        max: window.innerWidth < 480 ? asset.chartData.length * 1.15 : asset.chartData.length * 1.25
+        // When in a trade with expiry, extend the chart to show the full 30-second period
+        max: isActiveTrade ? asset.chartData.length * 1.3 : 
+             (window.innerWidth < 480 ? asset.chartData.length * 1.15 : asset.chartData.length * 1.25)
       },
       y: {
         display: false,
@@ -412,6 +456,14 @@ const ChartCard: React.FC<ChartCardProps> = ({
       <div className="chart-container" ref={chartContainerRef}>
         {/* Future projection area gradient */}
         <div className="chart-projection-area"></div>
+        
+        {/* Timer display when in active trade */}
+        {isActiveTrade && timeRemaining !== null && (
+          <div className={`expiry-timer ${timeRemaining < 10000 ? 'expiry-timer-ending' : ''}`}>
+            <div className="expiry-time">{formatTimeRemaining(timeRemaining)}</div>
+            <div className="expiry-label">Expiry</div>
+          </div>
+        )}
         
         {/* Chart with annotations */}
         <Line

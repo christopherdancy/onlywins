@@ -482,6 +482,16 @@ body, html {
   z-index: 15 !important;
 }
 
+.chartjs-annotation-expiryLine {
+  z-index: 12 !important;
+}
+
+.chartjs-annotation-expiryLine .chartjs-annotation-label {
+  font-weight: bold !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) !important;
+  z-index: 15 !important;
+}
+
 .price-label {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.6);
@@ -516,6 +526,39 @@ body, html {
   color: white;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   transform: rotate(-10deg);
+}
+
+/* Match Notification */
+.match-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(30, 30, 46, 0.9);
+  border: 2px solid #4bc0c0;
+  border-radius: 10px;
+  padding: 20px 40px;
+  text-align: center;
+  color: white;
+  z-index: 100;
+  animation: fadeInOut 1.5s ease-in-out;
+}
+
+.match-notification h2 {
+  margin: 0 0 10px;
+  color: #4bc0c0;
+}
+
+.match-notification p {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, -60%); }
+  15% { opacity: 1; transform: translate(-50%, -50%); }
+  85% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -40%); }
 }
 
 /* End of Stack */
@@ -710,4 +753,107 @@ body, html {
   .token-header h2 {
     font-size: 1.2rem;
   }
+}
+
+/* Expiry timer styling */
+.expiry-timer {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: rgba(30, 30, 46, 0.9);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: white;
+  text-align: center;
+  z-index: 20;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.expiry-time {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+.expiry-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  opacity: 0.8;
+  letter-spacing: 0.5px;
+}
+
+.expiry-timer-ending {
+  background-color: rgba(255, 59, 48, 0.8);
+  border: 1px solid rgba(255, 59, 48, 0.8);
+  box-shadow: 0 2px 12px rgba(255, 59, 48, 0.6);
+  transform: scale(1.05);
+}
+
+.expiry-timer-ending .expiry-time {
+  color: white;
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .expiry-timer {
+    top: 10px;
+    right: 10px;
+    padding: 6px 10px;
+  }
+  
+  .expiry-time {
+    font-size: 1rem;
+  }
+  
+  .expiry-label {
+    font-size: 0.6rem;
+  }
+}
+
+/* Expiry notification */
+.expiry-notification {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 59, 48, 0.9);
+  border-radius: 10px;
+  padding: 16px 32px;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+  z-index: 200;
+  animation: fadeIn 0.3s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.expiry-notification.fade-out {
+  animation: fadeOut 0.3s ease-in forwards;
+}
+
+.expiry-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -60%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(-50%, -40%); }
 }
