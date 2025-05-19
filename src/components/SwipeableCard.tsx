@@ -17,6 +17,8 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
     isUp: false,
     isDown: false,
   });
+  // Track swipe progress for visual effects
+  const [swipeProgress, setSwipeProgress] = React.useState({ left: 0, right: 0 });
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setDragStart({
@@ -37,6 +39,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
     const y = e.touches[0].clientY - dragStart.y;
     setDragOffset({ x, y });
     updateDirection(x, y);
+    updateSwipeProgress(x);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -45,6 +48,7 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
     const y = e.clientY - dragStart.y;
     setDragOffset({ x, y });
     updateDirection(x, y);
+    updateSwipeProgress(x);
   };
 
   const handleTouchEnd = () => {
@@ -55,8 +59,15 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
     finalizeDrag();
   };
 
+  const updateSwipeProgress = (x: number) => {
+    const threshold = 100; // Lower threshold so text appears quicker (was 150)
+    const leftProgress = x < 0 ? Math.min(Math.abs(x) / threshold, 1) : 0;
+    const rightProgress = x > 0 ? Math.min(x / threshold, 1) : 0;
+    setSwipeProgress({ left: leftProgress, right: rightProgress });
+  };
+
   const updateDirection = (x: number, y: number) => {
-    const threshold = 50;
+    const threshold = 30; // Reduced from 50 to make detection more responsive
     setDirection({
       isLeft: x < -threshold,
       isRight: x > threshold,
@@ -77,14 +88,21 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
       isUp: false,
       isDown: false,
     });
+    setSwipeProgress({ left: 0, right: 0 });
   };
 
   // Calculate rotation and translation based on drag
   const cardStyle: React.CSSProperties = {
-    transform: `translateX(${dragOffset.x}px) translateY(${dragOffset.y}px) rotate(${
-      dragOffset.x * 0.1
+    transform: `translateX(${dragOffset.x}px) translateY(${Math.min(Math.abs(dragOffset.x) * 0.15, 30) * (dragOffset.y > 0 ? 1 : -1)}px) rotate(${
+      dragOffset.x * 0.08
     }deg)`,
     transition: dragOffset.x === 0 && dragOffset.y === 0 ? 'transform 0.3s ease' : 'none',
+    boxShadow: 
+      swipeProgress.left > 0 
+        ? `${-8 * swipeProgress.left}px 0 20px rgba(255, 107, 107, ${0.2 + swipeProgress.left * 0.2})` 
+        : swipeProgress.right > 0 
+          ? `${8 * swipeProgress.right}px 0 20px rgba(75, 192, 192, ${0.2 + swipeProgress.right * 0.2})` 
+          : 'none'
   };
 
   // Calculate average entry price if we have an active trade
@@ -100,10 +118,21 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
   // Card classes
   const cardClasses = [
     'swipeable-card',
-    direction.isLeft ? 'swipe-left' : '',
-    direction.isRight ? 'swipe-right' : '',
     activeTrade ? 'in-trade' : '',
   ].filter(Boolean).join(' ');
+
+  // Overlay styles with opacity based on swipe progress
+  const leftOverlayStyle: React.CSSProperties = {
+    opacity: swipeProgress.left,
+    transform: `translate(-50%, -50%) rotate(-12deg) scale(${0.8 + swipeProgress.left * 0.5})`,
+    transition: swipeProgress.left === 0 ? 'opacity 0.3s ease, transform 0.3s ease' : 'none'
+  };
+
+  const rightOverlayStyle: React.CSSProperties = {
+    opacity: swipeProgress.right,
+    transform: `translate(-50%, -50%) rotate(12deg) scale(${0.8 + swipeProgress.right * 0.5})`,
+    transition: swipeProgress.right === 0 ? 'opacity 0.3s ease, transform 0.3s ease' : 'none'
+  };
 
   return (
     <div
@@ -123,17 +152,14 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
         </div>
       )}
       
-      {/* Action Overlays */}
-      {direction.isLeft && (
-        <div className="action-overlay left">
-          {activeTrade ? 'EXIT' : 'SKIP'}
-        </div>
-      )}
-      {direction.isRight && (
-        <div className="action-overlay right">
-          {activeTrade ? 'DOUBLE DOWN' : 'ENTER'}
-        </div>
-      )}
+      {/* Action Overlays - Always render but control opacity with swipeProgress */}
+      <div className="action-overlay center left-action" style={leftOverlayStyle}>
+        {activeTrade ? 'EXIT' : 'SKIP'}
+      </div>
+      
+      <div className="action-overlay center right-action" style={rightOverlayStyle}>
+        {activeTrade ? 'DOUBLE DOWN' : 'ENTER'}
+      </div>
 
       {/* Asset Chart & Info with investment and profit/loss details */}
       <ChartCard 
