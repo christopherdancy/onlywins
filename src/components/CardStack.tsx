@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import SwipeableCard from './SwipeableCard';
 import { Asset, SwipeDirection, ChartStrategy } from '../types';
 import { generateAssetCollection, generateRandomAsset } from '../utils/chartUtils';
+import { useWallet } from '../contexts/WalletContext';
 
 const CardStack: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
   const [activeAsset, setActiveAsset] = useState<Asset | null>(null);
+  const { updateBalance } = useWallet();
   const [volatilityState, setVolatilityState] = useState({
     inDump: false,         // Currently in a dump phase (for uptrend) or pump phase (for downtrend)
     dumpComplete: false,   // Finished the dump/pump phase (now in recovery/correction)
@@ -17,6 +19,7 @@ const CardStack: React.FC = () => {
     recoveryCounter: 0,    // Counter for recovery/correction duration
     ticksSinceDump: 0      // Ticks since last volatility event
   });
+  const [positions, setPositions] = useState<{ [id: string]: number }>({});
 
   // Initialize assets on mount
   useEffect(() => {
@@ -261,13 +264,44 @@ const CardStack: React.FC = () => {
   }, [currentIndex, assets]);
 
   const handleSwiped = (direction: SwipeDirection) => {
-    // If swiped right, show "match" popup sometimes
+    if (!activeAsset) return;
+    
+    // If swiped right (BUY), add position and deduct $1
     if (direction.isRight) {
+      // Deduct $1 from wallet for buying
+      updateBalance(-1);
+      
+      // Store the purchase price (current market cap) for this asset
+      setPositions(prev => ({
+        ...prev,
+        [activeAsset.id]: activeAsset.currentMarketCap
+      }));
+      
       // 70% chance to show "match" on right swipe for dopamine hit
       if (Math.random() < 0.7) {
         setShowMatch(true);
         setTimeout(() => setShowMatch(false), 1500);
       }
+    } 
+    // If swiped left (SELL) and we have a position, calculate profit/loss
+    else if (direction.isLeft && positions[activeAsset.id]) {
+      const purchasePrice = positions[activeAsset.id];
+      const currentPrice = activeAsset.currentMarketCap;
+      
+      // Calculate profit percentage
+      const profitPercent = (currentPrice - purchasePrice) / purchasePrice;
+      
+      // Add profit to wallet (we invested $1, so return is $1 * (1 + profit)
+      // Minimum return is $0.10 (to avoid complete loss)
+      const returnAmount = Math.max(1 * (1 + profitPercent), 0.1);
+      updateBalance(returnAmount);
+      
+      // Remove the position
+      setPositions(prev => {
+        const newPositions = { ...prev };
+        delete newPositions[activeAsset.id];
+        return newPositions;
+      });
     }
 
     // Move to next card

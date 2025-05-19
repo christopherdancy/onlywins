@@ -1,3 +1,26 @@
+/* Apply better defaults for mobile app */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+body, html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
 .app {
   text-align: center;
   height: 100%;
@@ -5,17 +28,30 @@
   flex-direction: column;
   background-color: #121212;
   color: white;
+  overflow: hidden;
+  position: relative;
 }
 
 .app-header {
-  padding: 0.8rem;
+  padding: 0.6rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(8px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .app-header h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   color: #4bc0c0;
+  white-space: nowrap;
 }
 
 .app-main {
@@ -23,7 +59,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0.8rem;
+  padding: 0.5rem;
+  overflow: hidden;
+  position: relative;
 }
 
 /* Card Stack Styles */
@@ -350,4 +388,105 @@
   height: 100%;
   font-size: 1.2rem;
   color: #4bc0c0;
+}
+
+/* Wallet styles */
+.wallet {
+  display: flex;
+  align-items: center;
+  background: rgba(75, 192, 192, 0.15);
+  padding: 0.45rem 0.8rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(75, 192, 192, 0.3);
+}
+
+.wallet-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wallet-icon {
+  color: #4bc0c0;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.wallet-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.wallet-balance {
+  font-weight: 600;
+  color: #4bc0c0;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.wallet-profit {
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+/* Media queries for smaller screens */
+@media (max-width: 460px) {
+  .app-header {
+    padding: 0.5rem 0.8rem;
+  }
+  
+  .app-header h1 {
+    font-size: 1.2rem;
+  }
+  
+  .wallet {
+    padding: 0.4rem 0.7rem;
+  }
+  
+  .wallet-content {
+    gap: 0.4rem;
+  }
+  
+  .wallet-info {
+    gap: 0.3rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-header {
+    padding: 0.5rem 0.7rem;
+  }
+  
+  .app-header h1 {
+    font-size: 1.1rem;
+  }
+  
+  .wallet {
+    padding: 0.35rem 0.6rem;
+  }
+  
+  .wallet-balance {
+    font-size: 0.85rem;
+  }
+  
+  .wallet-profit {
+    font-size: 0.65rem;
+  }
+  
+  .wallet-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .wallet-content {
+    gap: 0.3rem;
+  }
+  
+  .wallet-info {
+    gap: 0.25rem;
+  }
 }
