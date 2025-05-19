@@ -55,19 +55,38 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
   const priceBubbleRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const [displayPrice, setDisplayPrice] = useState(asset.currentMarketCap);
+  const [lastIntervalChange, setLastIntervalChange] = useState(0);
   
   // Update display price when asset changes
   useEffect(() => {
     setDisplayPrice(asset.currentMarketCap);
   }, [asset.currentMarketCap]);
   
+  // Update last-interval price change once every 30 seconds
+  useEffect(() => {
+    const updateChange = () => {
+      if (asset.chartData.length < 2) return;
+      const now = Date.now();
+      // Find the most recent point at least 30 seconds ago
+      const thirtySecondsAgo = now - 30000;
+      const recent = asset.chartData[asset.chartData.length - 1];
+      let prev = asset.chartData[0];
+      for (let i = asset.chartData.length - 2; i >= 0; i--) {
+        if (asset.chartData[i].timestamp <= thirtySecondsAgo) {
+          prev = asset.chartData[i];
+          break;
+        }
+      }
+      const change = ((recent.marketCap - prev.marketCap) / prev.marketCap) * 100;
+      setLastIntervalChange(change);
+    };
+    updateChange(); // Run once on mount/asset change
+    const interval = setInterval(updateChange, 30000);
+    return () => clearInterval(interval);
+  }, [asset.chartData]);
+  
   // Determine if we're in uptrend or downtrend strategy
   const isUptrendStrategy = asset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
-  
-  // Calculate percentage change (from start to current)
-  const startMarketCap = asset.chartData[0].marketCap;
-  const currentMarketCap = asset.currentMarketCap;
-  const percentChange = ((currentMarketCap - startMarketCap) / startMarketCap) * 100;
   
   // Get min and max market cap for scale - only from visible portion (80%)
   const visibleDataCount = Math.floor(asset.chartData.length * 0.8);
@@ -333,6 +352,27 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
 
   return (
     <div className="chart-card">
+      <div className="chart-footer">
+        <div className="chart-info">
+          <div className="token-header">
+            <img src={asset.iconUrl} alt={asset.symbol} className="token-icon" />
+            <h2>{asset.name}</h2>
+          </div>
+        </div>
+        <div 
+          className={`change-badge ${changeBadgeClasses.join(' ')}`}
+          style={{ 
+            color: lastIntervalChange > 0 ? '#4bc0c0' : '#ff6b6b',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            lineHeight: 1.1
+          }}
+        >
+          <span>{lastIntervalChange > 0 ? '+' : ''}{lastIntervalChange.toFixed(2)}%</span>
+          <span style={{ fontSize: '0.75em', color: 'rgba(255,255,255,0.5)', fontWeight: 400, marginTop: 2 }}>past 30 seconds</span>
+        </div>
+      </div>
 
       {/* Chart container becomes the main focus */}
       <div className="chart-container" ref={chartContainerRef}>
@@ -360,26 +400,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
         
         <Line ref={chartRef} data={chartData} options={chartOptions} />
       </div>
-      
-      {/* Footer section contains name, trending badge and change percentage */}
-      <div className="chart-footer">
-        <div className="chart-info">
-          <div className="token-header">
-            <img src={asset.iconUrl} alt={asset.symbol} className="token-icon" />
-            <h2>{asset.name}</h2>
-          </div>
-        </div>
-        <div 
-          className={`change-badge ${changeBadgeClasses.join(' ')}`}
-          style={{ 
-            color: isUptrendStrategy 
-              ? (percentChange > 0 ? '#4bc0c0' : '#ff6b6b') 
-              : (percentChange > 0 ? '#4bc0c0' : '#ff6b6b')
-          }}
-        >
-          {percentChange > 0 ? '+' : ''}{percentChange.toFixed(2)}%
-        </div>
-      </div>
+
     </div>
   );
 };
