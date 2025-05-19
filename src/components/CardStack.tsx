@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import SwipeableCard from './SwipeableCard';
-import { Asset, SwipeDirection, ChartStrategy } from '../types';
+import { Asset, SwipeDirection, ChartStrategy, ActiveTrade } from '../types';
 import { generateAssetCollection, generateRandomAsset } from '../utils/chartUtils';
 import { useWallet } from '../contexts/WalletContext';
 
 const CardStack: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showMatch, setShowMatch] = useState(false);
   const [activeAsset, setActiveAsset] = useState<Asset | null>(null);
+  const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
   const { updateBalance } = useWallet();
   const [volatilityState, setVolatilityState] = useState({
     inDump: false,         // Currently in a dump phase (for uptrend) or pump phase (for downtrend)
@@ -19,7 +19,6 @@ const CardStack: React.FC = () => {
     recoveryCounter: 0,    // Counter for recovery/correction duration
     ticksSinceDump: 0      // Ticks since last volatility event
   });
-  const [positions, setPositions] = useState<{ [id: string]: number }>({});
 
   // Initialize assets on mount
   useEffect(() => {
@@ -263,49 +262,69 @@ const CardStack: React.FC = () => {
     }
   }, [currentIndex, assets]);
 
+  // Handle trade entry or double down
+  const handleTradeEntry = () => {
+    if (!activeAsset) return;
+    
+    if (activeTrade && activeTrade.assetId === activeAsset.id) {
+      // Double down - add another $1 investment
+      updateBalance(-1); // Deduct from wallet
+      setActiveTrade({
+        ...activeTrade,
+        entryPrices: [...activeTrade.entryPrices, activeAsset.currentMarketCap],
+        totalInvestment: activeTrade.totalInvestment + 1
+      });
+    } else {
+      // New trade entry
+      updateBalance(-1); // Deduct from wallet
+      setActiveTrade({
+        assetId: activeAsset.id,
+        entryPrices: [activeAsset.currentMarketCap],
+        totalInvestment: 1,
+        entryTime: Date.now()
+      });
+    }
+  };
+  
+  // Handle trade exit and calculate profits
+  const handleTradeExit = () => {
+    if (!activeAsset || !activeTrade || activeTrade.assetId !== activeAsset.id) return;
+    
+    // Calculate profit/loss
+    const avgEntryPrice = activeTrade.entryPrices.reduce((sum, price) => sum + price, 0) / 
+                        activeTrade.entryPrices.length;
+    const currentPrice = activeAsset.currentMarketCap;
+    const profitPercent = (currentPrice - avgEntryPrice) / avgEntryPrice;
+    
+    // Calculate return amount (minimum return is 10% of investment)
+    const returnAmount = Math.max(activeTrade.totalInvestment * (1 + profitPercent), activeTrade.totalInvestment * 0.1);
+    
+    // Update wallet balance
+    updateBalance(returnAmount);
+    
+    // Exit trade
+    setActiveTrade(null);
+    
+    // Move to next asset
+    setCurrentIndex(prevIndex => prevIndex + 1);
+  };
+
   const handleSwiped = (direction: SwipeDirection) => {
     if (!activeAsset) return;
     
-    // If swiped right (BUY), add position and deduct $1
     if (direction.isRight) {
-      // Deduct $1 from wallet for buying
-      updateBalance(-1);
-      
-      // Store the purchase price (current market cap) for this asset
-      setPositions(prev => ({
-        ...prev,
-        [activeAsset.id]: activeAsset.currentMarketCap
-      }));
-      
-      // 70% chance to show "match" on right swipe for dopamine hit
-      if (Math.random() < 0.7) {
-        setShowMatch(true);
-        setTimeout(() => setShowMatch(false), 1500);
+      // Is this the currently active trade? Double down
+      // Otherwise enter new trade
+      handleTradeEntry();
+    } else if (direction.isLeft) {
+      // If we have an active trade for this asset, exit it
+      if (activeTrade && activeTrade.assetId === activeAsset.id) {
+        handleTradeExit();
+      } else {
+        // Just skip to next card
+        setCurrentIndex(prevIndex => prevIndex + 1);
       }
-    } 
-    // If swiped left (SELL) and we have a position, calculate profit/loss
-    else if (direction.isLeft && positions[activeAsset.id]) {
-      const purchasePrice = positions[activeAsset.id];
-      const currentPrice = activeAsset.currentMarketCap;
-      
-      // Calculate profit percentage
-      const profitPercent = (currentPrice - purchasePrice) / purchasePrice;
-      
-      // Add profit to wallet (we invested $1, so return is $1 * (1 + profit)
-      // Minimum return is $0.10 (to avoid complete loss)
-      const returnAmount = Math.max(1 * (1 + profitPercent), 0.1);
-      updateBalance(returnAmount);
-      
-      // Remove the position
-      setPositions(prev => {
-        const newPositions = { ...prev };
-        delete newPositions[activeAsset.id];
-        return newPositions;
-      });
     }
-
-    // Move to next card
-    setCurrentIndex(prevIndex => prevIndex + 1);
 
     // If we're running low on cards, generate more
     if (currentIndex >= assets.length - 3) {
@@ -323,6 +342,9 @@ const CardStack: React.FC = () => {
     return <div className="loading">Loading assets...</div>;
   }
 
+  // Determine if current asset has an active trade
+  const hasActiveTrade = activeTrade && activeAsset && activeTrade.assetId === activeAsset.id;
+
   return (
     <div className="card-stack">
       {/* Only render the current card to improve performance */}
@@ -331,15 +353,8 @@ const CardStack: React.FC = () => {
           key={assets[currentIndex].id}
           asset={activeAsset}
           onSwiped={handleSwiped}
+          activeTrade={hasActiveTrade ? activeTrade : null}
         />
-      )}
-
-      {/* Match notification */}
-      {showMatch && (
-        <div className="match-notification">
-          <h2>It's a match!</h2>
-          <p>You're in the trade!</p>
-        </div>
       )}
 
       {/* End of stack notification */}

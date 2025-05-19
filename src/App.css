@@ -85,14 +85,170 @@ body, html {
 
 .swipeable-card {
   position: relative;
-  height: 100%;
   width: 100%;
-  background-color: #1d1d1d;
-  border-radius: 16px;
+  max-width: 360px;
+  height: 550px;
+  background: #1e1e2e;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(75, 192, 192, 0.15);
+  user-select: none;
+  margin: 0 auto;
+  touch-action: none;
   will-change: transform;
-  padding: 0.5rem;
+}
+
+/* Active trade styling */
+.swipeable-card.in-trade {
+  background: linear-gradient(to bottom, rgba(75, 192, 192, 0.15), rgba(30, 30, 46, 1) 40%);
+  border: 2px solid #4bc0c0;
+  box-shadow: 0 10px 25px rgba(75, 192, 192, 0.4);
+}
+
+/* Update live trade indicator to be less intrusive */
+.live-trade-indicator {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  z-index: 20;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.live-trade-indicator::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ff3b30;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+/* Active trade info styling - updated to match change-badge */
+.active-trade-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background-color: rgba(30, 30, 46, 0.7);
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.active-trade-info .investment-amount {
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+}
+
+.active-trade-info .profit-loss {
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding-top: 2px;
+}
+
+.active-trade-info.profit .profit-loss {
+  color: #00bf63;
+}
+
+.active-trade-info.loss .profit-loss {
+  color: #ff6b6b;
+}
+
+/* Swipe direction indicators */
+.swipe-left {
+  border-color: #ff6b6b !important;
+}
+
+.swipe-right {
+  border-color: #4bc0c0 !important;
+}
+
+/* Action overlays for swipe directions */
+.action-overlay {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 1.5rem;
+  z-index: 10;
+  color: white;
+  text-align: center;
+}
+
+.action-overlay.left {
+  left: 20px;
+  background-color: #ff6b6b;
+  box-shadow: 0 3px 10px rgba(255, 107, 107, 0.5);
+}
+
+.action-overlay.right {
+  right: 20px;
+  background-color: #4bc0c0;
+  box-shadow: 0 3px 10px rgba(75, 192, 192, 0.5);
+}
+
+/* Trade overlay for active trades */
+.trade-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(to bottom, rgba(30, 30, 46, 0.8) 0%, rgba(30, 30, 46, 0) 100%);
+  z-index: 5;
+}
+
+.trade-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.trade-investment {
+  font-weight: 500;
+}
+
+.trade-profit-loss {
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.trade-profit-loss.profit {
+  background-color: rgba(0, 191, 99, 0.2);
+  color: #00bf63;
+}
+
+.trade-profit-loss.loss {
+  background-color: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.trade-entry-price {
+  opacity: 0.8;
+  font-size: 0.8rem;
 }
 
 /* Chart Card Styles */
@@ -190,21 +346,44 @@ body, html {
 }
 
 .change-badge {
-  font-size: .8rem;
-  font-weight: bold;
-  padding: 0.3rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  background-color: rgba(30, 30, 46, 0.7);
+  padding: 6px 12px;
+  border-radius: 6px;
 }
 
-/* Future projection area - simplified */
+.change-badge .change-amount {
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+}
+
+.change-badge .change-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+}
+
+.change-badge.positive .change-amount {
+  color: #00bf63;
+}
+
+.change-badge.negative .change-amount {
+  color: #ff6b6b;
+}
+
+/* Chart projection area */
 .chart-projection-area {
   position: absolute;
   top: 0;
   right: 0;
   width: 25%;
   height: 100%;
-  z-index: 5;
-  background: linear-gradient(to right, rgba(24, 24, 24, 0) 0%, rgba(24, 24, 24, 0.8) 100%);
+  background: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.15));
   pointer-events: none;
+  z-index: 1;
 }
 
 /* Current price indicator */
@@ -283,6 +462,7 @@ body, html {
   50% { transform: translateY(-3px); }
 }
 
+/* Price labels */
 .price-labels {
   position: absolute;
   right: 20px;
@@ -293,6 +473,13 @@ body, html {
   justify-content: space-between;
   z-index: 10;
   pointer-events: none;
+}
+
+/* Entry price line styling */
+.chartjs-annotation-entryLine .chartjs-annotation-label {
+  font-weight: bold !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5) !important;
+  z-index: 15 !important;
 }
 
 .price-label {
@@ -331,53 +518,31 @@ body, html {
   transform: rotate(-10deg);
 }
 
-/* Match Notification */
-.match-notification {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.9);
-  padding: 2rem;
-  border-radius: 12px;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.match-notification h2 {
-  color: #4bc0c0;
-  margin-top: 0;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 /* End of Stack */
 .end-of-stack {
-  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  height: 550px;
+  color: white;
+  text-align: center;
 }
 
 .end-of-stack button {
+  margin-top: 20px;
+  padding: 10px 20px;
   background-color: #4bc0c0;
   color: white;
   border: none;
-  padding: 0.8rem 1.5rem;
-  border-radius: 30px;
+  border-radius: 5px;
   font-size: 1rem;
-  font-weight: bold;
   cursor: pointer;
-  margin-top: 1rem;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s;
 }
 
 .end-of-stack button:hover {
-  background-color: #3aa8a8;
+  background-color: #3da3a3;
 }
 
 /* Loading state */
@@ -488,5 +653,61 @@ body, html {
   
   .wallet-info {
     gap: 0.25rem;
+  }
+}
+
+/* Trade badge styling - improved version */
+.trade-badge {
+  position: absolute;
+  top: 50px; /* Positioned below the live trade indicator */
+  right: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  z-index: 10;
+  background-color: rgba(30, 30, 46, 0.9);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(75, 192, 192, 0.5);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .chart-container {
+    margin-top: 10px;
+    height: 200px; /* Smaller height on mobile */
+  }
+  
+  .current-price-bubble {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-width: 1.5px;
+  }
+  
+  .price-labels {
+    right: 5px;
+    font-size: 0.65rem;
+  }
+  
+  .chart-projection-area {
+    width: 20%; /* Narrower projection area on mobile */
+  }
+  
+  .change-badge, .active-trade-info {
+    padding: 4px 8px;
+  }
+  
+  .change-badge .change-amount, .active-trade-info .investment-amount {
+    font-size: 0.9rem;
+  }
+  
+  .change-badge .change-label {
+    font-size: 0.6rem;
+  }
+  
+  .token-header h2 {
+    font-size: 1.2rem;
   }
 }

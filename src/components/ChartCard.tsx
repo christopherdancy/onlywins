@@ -12,6 +12,7 @@ import {
   Legend,
   ChartOptions
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 
 // Register Chart.js components
 ChartJS.register(
@@ -21,11 +22,15 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  annotationPlugin
 );
 
 interface ChartCardProps {
   asset: Asset;
+  avgEntryPrice?: number; // Optional average entry price for active trades
+  activeTotalInvestment?: number; // Optional total investment for active trades
+  profitLossPercent?: number; // Optional profit/loss percentage for active trades
 }
 
 // Helper function for simplified k-notation
@@ -50,7 +55,12 @@ const formatSimplifiedPrice = (value: number): string => {
   return `$${value.toFixed(2)}`;
 };
 
-const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
+const ChartCard: React.FC<ChartCardProps> = ({ 
+  asset, 
+  avgEntryPrice, 
+  activeTotalInvestment, 
+  profitLossPercent 
+}) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const priceBubbleRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
@@ -130,7 +140,7 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
     // Calculate the number of points to show (75% of the data)
     const visibleDataCount = Math.floor(asset.chartData.length * 0.75);
     
-    // Get visible data points
+    // Get visible data points - use actual 75% of data points
     let visibleData = [...asset.chartData].slice(-visibleDataCount);
     
     // For uptrend strategy, we want to ensure the last few points are trending upward
@@ -207,148 +217,169 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
       }
     }
     
+    // Create labels (timestamps) for x-axis
+    const labels = visibleData.map(point => new Date(point.timestamp).toISOString());
+    
     return {
-      labels: asset.chartData.map(point => {
-        const date = new Date(point.timestamp);
-        return `${date.getMinutes()}:${date.getSeconds().toString().padStart(2, '0')}`;
-      }),
+      labels,
       datasets: [
         {
           label: asset.symbol,
           data: visibleData.map(point => point.marketCap),
           fill: true,
           backgroundColor: isUptrendStrategy 
-            ? 'rgba(75, 192, 192, 0.2)' 
-            : 'rgba(255, 107, 107, 0.2)',
+            ? 'rgba(75, 192, 192, 0.1)' 
+            : 'rgba(255, 107, 107, 0.1)',
           borderColor: lineColor,
-          tension: 0.3,
-          pointHoverRadius: 0,
           borderWidth: 2,
-          // Add point styling to show only the last point
-          pointBackgroundColor: function(context: {dataIndex: number, dataset: {data: any[]}}) {
-            // Only show the last point (at the end of the chart)
-            const index = context.dataIndex;
-            const count = context.dataset.data.length;
-            return index === count - 1 ? lineColor : 'transparent';
-          },
-          pointBorderColor: function(context: {dataIndex: number, dataset: {data: any[]}}) {
-            const index = context.dataIndex;
-            const count = context.dataset.data.length;
-            return index === count - 1 ? lineColor : 'transparent';
-          },
-          pointRadius: function(context: {dataIndex: number, dataset: {data: any[]}}) {
-            const index = context.dataIndex;
-            const count = context.dataset.data.length;
-            return index === count - 1 ? 6 : 0;
-          },
-          pointBorderWidth: function(context: {dataIndex: number, dataset: {data: any[]}}) {
-            const index = context.dataIndex;
-            const count = context.dataset.data.length;
-            return index === count - 1 ? 2 : 0;
-          },
-        },
-      ],
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+        }
+      ]
     };
-  }, [asset, minMarketCap, maxMarketCap, isUptrendStrategy, isInVolatilityEvent, isInRecoveryEvent]);
+  }, [asset, minMarketCap, maxMarketCap, isInVolatilityEvent, isInRecoveryEvent, isUptrendStrategy]);
 
-  // Effect to position the price bubble at the exact position of the last visible data point
+  // Position the price bubble at the last visible point
   useEffect(() => {
-    if (!chartContainerRef.current || !priceBubbleRef.current || !chartRef.current) return;
-    
-    const chart = chartRef.current;
-    const bubbleElement = priceBubbleRef.current;
-    const containerElement = chartContainerRef.current;
-    
-    // Need to wait for chart to render
     const positionBubble = () => {
-      if (!chart || !chart.canvas || !bubbleElement || !containerElement) return;
+      if (!chartRef.current || !priceBubbleRef.current || !chartContainerRef.current) return;
+      
+      const chart = chartRef.current;
+      const bubbleElement = priceBubbleRef.current;
+      const containerElement = chartContainerRef.current;
       
       // Get dataset meta
       const datasetMeta = chart.getDatasetMeta(0);
       
-      if (chart.scales && datasetMeta && datasetMeta.data.length > 0) {
+      if (chart.scales && datasetMeta && datasetMeta.data && datasetMeta.data.length > 0) {
         // Get the position of the last visible data point
         const count = datasetMeta.data.length;
         const lastVisiblePoint = datasetMeta.data[count - 1];
         
-        // Position bubble at exactly this x position
+        // Position bubble at exactly this x position, centered on the bubble
         const bubbleWidth = bubbleElement.offsetWidth;
-        bubbleElement.style.left = `${lastVisiblePoint.x - (bubbleWidth / 2)}px`;
-        bubbleElement.style.top = `${lastVisiblePoint.y - 30}px`;
+        
+        // For narrow screens, adjust to ensure the bubble stays within container bounds
+        const isMobile = window.innerWidth < 480;
+        const containerRight = containerElement.offsetWidth;
+        
+        // Calculate initial x position
+        let xPos = lastVisiblePoint.x - (bubbleWidth / 2);
+        
+        // Make sure bubble doesn't go off right edge
+        if (xPos + bubbleWidth > containerRight - 5) {
+          xPos = containerRight - bubbleWidth - 5;
+        }
+        
+        // Make sure bubble doesn't go off left edge 
+        if (xPos < 5) {
+          xPos = 5;
+        }
+        
+        bubbleElement.style.left = `${xPos}px`;
+        bubbleElement.style.top = `${lastVisiblePoint.y - (isMobile ? 25 : 30)}px`;
       } else {
-        // Fallback if chart is not ready
+        // Fallback positioning if chart not ready
         const containerWidth = containerElement.offsetWidth;
         const bubbleWidth = bubbleElement.offsetWidth;
-        const xPosition = containerWidth * 0.75 - (bubbleWidth / 2);
-        bubbleElement.style.left = `${xPosition}px`;
+        
+        // For mobile, position bubble more to the left
+        const positionRatio = window.innerWidth < 480 ? 0.7 : 0.75;
+        const xPos = Math.min(containerWidth * positionRatio - (bubbleWidth / 2), containerWidth - bubbleWidth - 5);
+        
+        bubbleElement.style.left = `${xPos}px`;
       }
     };
     
-    // Position initially after a short delay
-    const initialTimer = setTimeout(positionBubble, 100);
-    
-    // Then set up a continuous update interval to handle real-time changes
-    const updateInterval = setInterval(positionBubble, 100);
+    // Position on render and window resize
+    const initialTimer = setTimeout(positionBubble, 300);
+    const handleResize = () => positionBubble();
+    window.addEventListener('resize', handleResize);
     
     return () => {
       clearTimeout(initialTimer);
-      clearInterval(updateInterval);
+      window.removeEventListener('resize', handleResize);
     };
-  }, [asset, chartContainerRef, priceBubbleRef, chartRef, displayPrice]);
+  }, [chartData]);
 
-  const chartOptions: ChartOptions<'line'> = useMemo(() => {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false,
-        },
-        tooltip: {
-          enabled: false,
-        },
-      },
-      scales: {
-        x: {
-          display: false,
-          grid: {
-            display: false,
-          },
-          // Add 25% more space on the right for mental projection
-          max: asset.chartData.length * 1.25,
-        },
-        y: {
-          display: false,
-          grid: {
-            display: false,
-          },
-          min: minMarketCap * 0.75, // Show 75% of vertical height by adjusting min/max
-          max: maxMarketCap * 1.25, // Add extra space at the top
-        },
-      },
-      animation: false,
-    };
-  }, [asset.chartData, minMarketCap, maxMarketCap]);
-
-  // Determine CSS classes for price bubble based on the strategy and current state
+  // Check if we're in active trade mode
+  const isActiveTrade = avgEntryPrice !== undefined;
+  
+  // Determine price bubble classes
   const priceBubbleClasses = [];
-  if (isUptrendStrategy) {
-    if (isInVolatilityEvent) priceBubbleClasses.push('price-dropping');
-    else if (isInRecoveryEvent) priceBubbleClasses.push('price-recovering');
-  } else {
-    if (isInVolatilityEvent) priceBubbleClasses.push('price-recovering');
-    else if (isInRecoveryEvent) priceBubbleClasses.push('price-dropping');
+  if (isInVolatilityEvent) {
+    priceBubbleClasses.push('price-dropping');
+  } else if (isInRecoveryEvent) {
+    priceBubbleClasses.push('price-recovering');
   }
-
-  // Determine CSS classes for change badge based on strategy and current state
-  const changeBadgeClasses = [];
-  if (isUptrendStrategy) {
-    if (isInVolatilityEvent) changeBadgeClasses.push('dropping');
-    else if (isInRecoveryEvent) changeBadgeClasses.push('recovering');
-  } else {
-    if (isInVolatilityEvent) changeBadgeClasses.push('recovering');
-    else if (isInRecoveryEvent) changeBadgeClasses.push('dropping');
-  }
+  
+  // Chart options with entry price annotation if available
+  const chartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: {
+        right: 100,
+        top: 80,
+      }
+    },
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        enabled: false,
+      },
+      annotation: avgEntryPrice ? {
+        annotations: {
+          entryLine: {
+            type: 'line',
+            scaleID: 'y',
+            value: avgEntryPrice,
+            borderColor: '#FFD700',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            drawTime: 'afterDatasetsDraw',
+            label: {
+              display: true,
+              content: `Entry: ${formatSimplifiedPrice(avgEntryPrice)}`,
+              position: 'start',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              color: '#FFD700',
+              font: {
+                size: 12,
+                weight: 'bold'
+              },
+              padding: 6
+            }
+          }
+        }
+      } : undefined
+    },
+    scales: {
+      x: {
+        display: false,
+        grid: {
+          display: false
+        },
+        // Add 25% more space on the right for projection, but scale based on screen size
+        max: window.innerWidth < 480 ? asset.chartData.length * 1.15 : asset.chartData.length * 1.25
+      },
+      y: {
+        display: false,
+        grid: {
+          display: false
+        },
+        // Set min/max to show 75% of vertical height, but less extreme for mobile
+        min: minMarketCap * 0.85, 
+        max: maxMarketCap * 1.15
+      }
+    },
+    animation: {
+      duration: 0 // Disable animations for performance
+    }
+  };
 
   return (
     <div className="chart-card">
@@ -359,37 +390,38 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
             <h2>{asset.name}</h2>
           </div>
         </div>
-        <div 
-          className={`change-badge ${changeBadgeClasses.join(' ')}`}
-          style={{ 
-            color: lastIntervalChange > 0 ? '#4bc0c0' : '#ff6b6b',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            lineHeight: 1.1
-          }}
-        >
-          <span>{lastIntervalChange > 0 ? '+' : ''}{lastIntervalChange.toFixed(2)}%</span>
-          <span style={{ fontSize: '0.75em', color: 'rgba(255,255,255,0.5)', fontWeight: 400, marginTop: 2 }}>past 30 seconds</span>
-        </div>
+        {/* Conditionally show either active trade info or 30-second price change */}
+        {isActiveTrade && profitLossPercent !== undefined ? (
+          <div className={`active-trade-info ${profitLossPercent >= 0 ? 'profit' : 'loss'}`}>
+            <div className="investment-amount">${activeTotalInvestment?.toFixed(2)}</div>
+            <div className="profit-loss">
+              {profitLossPercent >= 0 ? '+' : ''}{profitLossPercent.toFixed(2)}%
+            </div>
+          </div>
+        ) : (
+          <div className={`change-badge ${lastIntervalChange >= 0 ? 'positive' : 'negative'}`}>
+            <div className="change-amount">
+              {lastIntervalChange >= 0 ? '+' : ''}{lastIntervalChange.toFixed(2)}%
+            </div>
+            <div className="change-label">past 30 sec</div>
+          </div>
+        )}
       </div>
 
-      {/* Chart container becomes the main focus */}
+      {/* Chart container */}
       <div className="chart-container" ref={chartContainerRef}>
-        {/* Future projection area - just a gradient, no question mark or price */}
+        {/* Future projection area gradient */}
         <div className="chart-projection-area"></div>
         
-        {/* Current price highlight - positioned at the end of the visible chart */}
-        <div className="current-price-indicator">
-          <div 
-            className={`current-price-bubble ${priceBubbleClasses.join(' ')}`} 
-            ref={priceBubbleRef}
-          >
-            {formatSimplifiedPrice(displayPrice)}
-          </div>
-        </div>
+        {/* Chart with annotations */}
+        <Line
+          ref={chartRef}
+          data={chartData}
+          options={chartOptions}
+          height={250}
+        />
         
-        {/* Price labels - reduced number */}
+        {/* Price labels */}
         <div className="price-labels">
           {priceSteps.map((price, index) => (
             <div key={index} className="price-label">
@@ -398,9 +430,14 @@ const ChartCard: React.FC<ChartCardProps> = ({ asset }) => {
           ))}
         </div>
         
-        <Line ref={chartRef} data={chartData} options={chartOptions} />
+        {/* Current price bubble */}
+        <div 
+          ref={priceBubbleRef} 
+          className={`current-price-bubble ${priceBubbleClasses.join(' ')}`}
+        >
+          {formatSimplifiedPrice(displayPrice)}
+        </div>
       </div>
-
     </div>
   );
 };

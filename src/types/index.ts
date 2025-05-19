@@ -31,4 +31,12 @@ export interface SwipeDirection {
   isLeft?: boolean;
   isUp?: boolean;
   isDown?: boolean;
+}
+
+// Active trade information
+export interface ActiveTrade {
+  assetId: string;
+  entryPrices: number[]; // Array of entry prices for averaging
+  totalInvestment: number; // Amount invested (increases with double-downs)
+  entryTime: number; // When the trade was entered
 } 
