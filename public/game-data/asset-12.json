@@ -1,0 +1,491 @@
+{
+  "id": "game-nefi-1747737074426",
+  "name": "Nebula Finance",
+  "symbol": "NEFI",
+  "description": "Nebula Finance - a volatile crypto token with great potential for trading",
+  "chartData": [
+    {
+      "timestamp": 1747736954426,
+      "marketCap": 71482.72159728235
+    },
+    {
+      "timestamp": 1747736955426,
+      "marketCap": 74458.66150322254
+    },
+    {
+      "timestamp": 1747736956426,
+      "marketCap": 70208.58151443157
+    },
+    {
+      "timestamp": 1747736957426,
+      "marketCap": 72427.159026243
+    },
+    {
+      "timestamp": 1747736958426,
+      "marketCap": 67155.8883435023
+    },
+    {
+      "timestamp": 1747736959426,
+      "marketCap": 67199.7241343472
+    },
+    {
+      "timestamp": 1747736960426,
+      "marketCap": 67930.03503266441
+    },
+    {
+      "timestamp": 1747736961426,
+      "marketCap": 66550.20987407643
+    },
+    {
+      "timestamp": 1747736962426,
+      "marketCap": 66837.9711907087
+    },
+    {
+      "timestamp": 1747736963426,
+      "marketCap": 67662.01608939216
+    },
+    {
+      "timestamp": 1747736964426,
+      "marketCap": 63234.5341783821
+    },
+    {
+      "timestamp": 1747736965426,
+      "marketCap": 60768.49679311741
+    },
+    {
+      "timestamp": 1747736966426,
+      "marketCap": 73210.20553361035
+    },
+    {
+      "timestamp": 1747736967426,
+      "marketCap": 65651.00962267806
+    },
+    {
+      "timestamp": 1747736968426,
+      "marketCap": 62547.238171194804
+    },
+    {
+      "timestamp": 1747736969426,
+      "marketCap": 61022.33649401331
+    },
+    {
+      "timestamp": 1747736970426,
+      "marketCap": 59615.20849042089
+    },
+    {
+      "timestamp": 1747736971426,
+      "marketCap": 52905.522531473354
+    },
+    {
+      "timestamp": 1747736972426,
+      "marketCap": 50785.63480645691
+    },
+    {
+      "timestamp": 1747736973426,
+      "marketCap": 50635.59675574428
+    },
+    {
+      "timestamp": 1747736974426,
+      "marketCap": 50275.9271108258
+    },
+    {
+      "timestamp": 1747736975426,
+      "marketCap": 43254.69379342897
+    },
+    {
+      "timestamp": 1747736976426,
+      "marketCap": 42766.23593094222
+    },
+    {
+      "timestamp": 1747736977426,
+      "marketCap": 40706.74145109434
+    },
+    {
+      "timestamp": 1747736978426,
+      "marketCap": 39310.78921785378
+    },
+    {
+      "timestamp": 1747736979426,
+      "marketCap": 39900.24386330647
+    },
+    {
+      "timestamp": 1747736980426,
+      "marketCap": 36081.51200021211
+    },
+    {
+      "timestamp": 1747736981426,
+      "marketCap": 33521.969630848056
+    },
+    {
+      "timestamp": 1747736982426,
+      "marketCap": 32431.72461323097
+    },
+    {
+      "timestamp": 1747736983426,
+      "marketCap": 31119.592965173346
+    },
+    {
+      "timestamp": 1747736984426,
+      "marketCap": 30467.439317893743
+    },
+    {
+      "timestamp": 1747736985426,
+      "marketCap": 27974.953580764235
+    },
+    {
+      "timestamp": 1747736986426,
+      "marketCap": 25158.035635554043
+    },
+    {
+      "timestamp": 1747736987426,
+      "marketCap": 24898.928249859084
+    },
+    {
+      "timestamp": 1747736988426,
+      "marketCap": 22991.07322022012
+    },
+    {
+      "timestamp": 1747736989426,
+      "marketCap": 21414.559902285862
+    },
+    {
+      "timestamp": 1747736990426,
+      "marketCap": 19873.7939533004
+    },
+    {
+      "timestamp": 1747736991426,
+      "marketCap": 16547.64129106969
+    },
+    {
+      "timestamp": 1747736992426,
+      "marketCap": 16139.923968666133
+    },
+    {
+      "timestamp": 1747736993426,
+      "marketCap": 14350.794515273132
+    },
+    {
+      "timestamp": 1747736994426,
+      "marketCap": 13508.172354721255
+    },
+    {
+      "timestamp": 1747736995426,
+      "marketCap": 10722.480210018479
+    },
+    {
+      "timestamp": 1747736996426,
+      "marketCap": 9674.53830031426
+    },
+    {
+      "timestamp": 1747736997426,
+      "marketCap": 8130.184917174504
+    },
+    {
+      "timestamp": 1747736998426,
+      "marketCap": 6651.3925675550145
+    },
+    {
+      "timestamp": 1747736999426,
+      "marketCap": 5576.032516868549
+    },
+    {
+      "timestamp": 1747737000426,
+      "marketCap": 3928.595975294887
+    },
+    {
+      "timestamp": 1747737001426,
+      "marketCap": 2645.133743981143
+    },
+    {
+      "timestamp": 1747737002426,
+      "marketCap": 1104.013667965223
+    },
+    {
+      "timestamp": 1747737003426,
+      "marketCap": 3935.772215934303
+    },
+    {
+      "timestamp": 1747737004426,
+      "marketCap": 7382.952570823465
+    },
+    {
+      "timestamp": 1747737005426,
+      "marketCap": 11606.69992322876
+    },
+    {
+      "timestamp": 1747737006426,
+      "marketCap": 14683.91555209272
+    },
+    {
+      "timestamp": 1747737007426,
+      "marketCap": 18558.05640522666
+    },
+    {
+      "timestamp": 1747737008426,
+      "marketCap": 22472.85088379621
+    },
+    {
+      "timestamp": 1747737009426,
+      "marketCap": 25353.86265073244
+    },
+    {
+      "timestamp": 1747737010426,
+      "marketCap": 31284.2570613913
+    },
+    {
+      "timestamp": 1747737011426,
+      "marketCap": 33730.279097672494
+    },
+    {
+      "timestamp": 1747737012426,
+      "marketCap": 40479.762294775894
+    },
+    {
+      "timestamp": 1747737013426,
+      "marketCap": 42039.41679947211
+    },
+    {
+      "timestamp": 1747737014426,
+      "marketCap": 49491.64777617408
+    },
+    {
+      "timestamp": 1747737015426,
+      "marketCap": 54101.17798397666
+    },
+    {
+      "timestamp": 1747737016426,
+      "marketCap": 57178.21120934524
+    },
+    {
+      "timestamp": 1747737017426,
+      "marketCap": 59746.257735779065
+    },
+    {
+      "timestamp": 1747737018426,
+      "marketCap": 61020.58931421172
+    },
+    {
+      "timestamp": 1747737019426,
+      "marketCap": 67171.71181464875
+    },
+    {
+      "timestamp": 1747737020426,
+      "marketCap": 71129.7587282641
+    },
+    {
+      "timestamp": 1747737021426,
+      "marketCap": 75560.5231837876
+    },
+    {
+      "timestamp": 1747737022426,
+      "marketCap": 78168.26005292963
+    },
+    {
+      "timestamp": 1747737023426,
+      "marketCap": 88853.22729324401
+    },
+    {
+      "timestamp": 1747737024426,
+      "marketCap": 94932.93714029326
+    },
+    {
+      "timestamp": 1747737025426,
+      "marketCap": 97103.08544657554
+    },
+    {
+      "timestamp": 1747737026426,
+      "marketCap": 95038.04102858734
+    },
+    {
+      "timestamp": 1747737027426,
+      "marketCap": 104681.64382627668
+    },
+    {
+      "timestamp": 1747737028426,
+      "marketCap": 102532.0626971446
+    },
+    {
+      "timestamp": 1747737029426,
+      "marketCap": 108604.02269745086
+    },
+    {
+      "timestamp": 1747737030426,
+      "marketCap": 115240.11611304115
+    },
+    {
+      "timestamp": 1747737031426,
+      "marketCap": 122882.10381033376
+    },
+    {
+      "timestamp": 1747737032426,
+      "marketCap": 122110.88661861669
+    },
+    {
+      "timestamp": 1747737033426,
+      "marketCap": 134854.98937859075
+    },
+    {
+      "timestamp": 1747737034426,
+      "marketCap": 131136.65442276222
+    },
+    {
+      "timestamp": 1747737035426,
+      "marketCap": 146755.47008906602
+    },
+    {
+      "timestamp": 1747737036426,
+      "marketCap": 142552.1436462251
+    },
+    {
+      "timestamp": 1747737037426,
+      "marketCap": 149389.4488340743
+    },
+    {
+      "timestamp": 1747737038426,
+      "marketCap": 162068.6334966874
+    },
+    {
+      "timestamp": 1747737039426,
+      "marketCap": 154033.86943208537
+    },
+    {
+      "timestamp": 1747737040426,
+      "marketCap": 155411.67028204378
+    },
+    {
+      "timestamp": 1747737041426,
+      "marketCap": 164423.52913810732
+    },
+    {
+      "timestamp": 1747737042426,
+      "marketCap": 180823.28898534138
+    },
+    {
+      "timestamp": 1747737043426,
+      "marketCap": 181408.86872446886
+    },
+    {
+      "timestamp": 1747737044426,
+      "marketCap": 178512.7650681189
+    },
+    {
+      "timestamp": 1747737045426,
+      "marketCap": 184168.50775131892
+    },
+    {
+      "timestamp": 1747737046426,
+      "marketCap": 189730.852257397
+    },
+    {
+      "timestamp": 1747737047426,
+      "marketCap": 192686.05312689178
+    },
+    {
+      "timestamp": 1747737048426,
+      "marketCap": 191508.7492404882
+    },
+    {
+      "timestamp": 1747737049426,
+      "marketCap": 195391.70392230668
+    },
+    {
+      "timestamp": 1747737050426,
+      "marketCap": 207881.60359714358
+    },
+    {
+      "timestamp": 1747737051426,
+      "marketCap": 219642.2867952553
+    },
+    {
+      "timestamp": 1747737052426,
+      "marketCap": 219716.84686336207
+    },
+    {
+      "timestamp": 1747737053426,
+      "marketCap": 228028.4588240726
+    },
+    {
+      "timestamp": 1747737054426,
+      "marketCap": 223038.93805873662
+    },
+    {
+      "timestamp": 1747737055426,
+      "marketCap": 247496.39567455172
+    },
+    {
+      "timestamp": 1747737056426,
+      "marketCap": 228710.53086386237
+    },
+    {
+      "timestamp": 1747737057426,
+      "marketCap": 248854.84610064255
+    },
+    {
+      "timestamp": 1747737058426,
+      "marketCap": 256313.9158882331
+    },
+    {
+      "timestamp": 1747737059426,
+      "marketCap": 255925.23440264308
+    },
+    {
+      "timestamp": 1747737060426,
+      "marketCap": 271619.437438896
+    },
+    {
+      "timestamp": 1747737061426,
+      "marketCap": 273471.4944975078
+    },
+    {
+      "timestamp": 1747737062426,
+      "marketCap": 266303.11852409225
+    },
+    {
+      "timestamp": 1747737063426,
+      "marketCap": 281674.4895214847
+    },
+    {
+      "timestamp": 1747737064426,
+      "marketCap": 290629.9779482065
+    },
+    {
+      "timestamp": 1747737065426,
+      "marketCap": 264809.1877258871
+    },
+    {
+      "timestamp": 1747737066426,
+      "marketCap": 299322.6144583255
+    },
+    {
+      "timestamp": 1747737067426,
+      "marketCap": 279646.7615389375
+    },
+    {
+      "timestamp": 1747737068426,
+      "marketCap": 247487.55088615275
+    },
+    {
+      "timestamp": 1747737069426,
+      "marketCap": 243231.3052301317
+    },
+    {
+      "timestamp": 1747737070426,
+      "marketCap": 301329.5143825654
+    },
+    {
+      "timestamp": 1747737071426,
+      "marketCap": 301630.6331584171
+    },
+    {
+      "timestamp": 1747737072426,
+      "marketCap": 311875.07097510836
+    },
+    {
+      "timestamp": 1747737073426,
+      "marketCap": 306022.15623598767
+    }
+  ],
+  "currentMarketCap": 306022.15623598767,
+  "iconUrl": "data:image/svg+xml;base64,CiAgICA8c3ZnIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgdmlld0JveD0iMCAwIDEwMCAxMDAiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPgogICAgICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iI0ZGMDBGRiIgLz4KICAgICAgPHRleHQgeD0iNTAiIHk9IjUwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiPk48L3RleHQ+CiAgICA8L3N2Zz4KICA=",
+  "strategy": "uptrend_with_dumps"
+}

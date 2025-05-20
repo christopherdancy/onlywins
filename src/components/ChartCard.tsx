@@ -196,49 +196,21 @@ const ChartCard: React.FC<ChartCardProps> = ({
     const visibleData = [...asset.chartData].slice(-visibleDataCount);
     
     // Prepare labels and data values
+    // Use indices as labels since the timestamps might be inconsistent between assets
     const labels = visibleData.map((_, i) => i.toString());
     const dataValues = visibleData.map(point => point.marketCap);
     
-    // Ensure the last points are accelerating properly
-    // For uptrend: make sure last points are trending up
-    // For downtrend: make sure last points are trending down
-    const pointsToAdjust = 5; // Last 5 points
-    if (visibleData.length >= pointsToAdjust) {
-      // No need to store last points since we're using them immediately
-      if (isUptrendStrategy && !isInVolatilityEvent) {
-        // Ensure last points trend upward
-        for (let i = dataValues.length - pointsToAdjust + 1; i < dataValues.length; i++) {
-          const prevPoint = dataValues[i - 1];
-          const idealIncrease = prevPoint * (0.01 + (i - (dataValues.length - pointsToAdjust) + 1) * 0.005);
-          dataValues[i] = Math.max(dataValues[i], prevPoint + idealIncrease);
-        }
-      }
-      else if (!isUptrendStrategy && !isInRecoveryEvent) {
-        // Ensure last points trend downward
-        for (let i = dataValues.length - pointsToAdjust + 1; i < dataValues.length; i++) {
-          const prevPoint = dataValues[i - 1];
-          const idealDecrease = prevPoint * (0.01 + (i - (dataValues.length - pointsToAdjust) + 1) * 0.005);
-          dataValues[i] = Math.min(dataValues[i], prevPoint - idealDecrease);
-        }
-      }
-    }
-    
-    // Adjust last point based on current market conditions
-    const lastIndex = dataValues.length - 1;
-    if (isInVolatilityEvent) {
-      // If we're in a dump, make last point lower
-      dataValues[lastIndex] = dataValues[lastIndex] * 0.97;
-    } else if (isInRecoveryEvent) {
-      // If we're in recovery, make last point higher
-      dataValues[lastIndex] = dataValues[lastIndex] * 1.03;
-    }
+    // Ensure the market cap values are properly formatted as numbers
+    const normalizedValues = dataValues.map(val => 
+      typeof val === 'string' ? parseFloat(val) : val
+    );
     
     return {
       labels,
       datasets: [
         {
           label: asset.name,
-          data: dataValues,
+          data: normalizedValues,
           fill: false,
           borderColor: lineColor,
           borderWidth: 3,

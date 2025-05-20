@@ -388,4 +388,80 @@ export const generateAssetCollection = (count: number = 10): Asset[] => {
     assets.push(generateRandomAsset());
   }
   return assets;
+};
+
+// New functions to handle pregenerated data
+
+// Load a single asset from the pregenerated dataset
+export const loadPreGeneratedAsset = async (assetId: number): Promise<Asset | null> => {
+  try {
+    const response = await fetch(`/game-data/asset-${assetId}.json`);
+    if (!response.ok) {
+      console.error(`Failed to load asset-${assetId}.json`);
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Error loading asset-${assetId}.json:`, error);
+    return null;
+  }
+};
+
+// Load multiple assets from the pregenerated dataset
+export const loadPreGeneratedAssets = async (count: number = 10): Promise<Asset[]> => {
+  const assets: Asset[] = [];
+  // Total number of pregenerated assets
+  const maxAssets = 25;
+  
+  // Use a static state to track which asset we loaded last
+  // This is outside the function to maintain state between calls
+  if (typeof (loadPreGeneratedAssets as any).lastAssetIndex === 'undefined') {
+    (loadPreGeneratedAssets as any).lastAssetIndex = 0;
+  }
+  
+  const startId = (loadPreGeneratedAssets as any).lastAssetIndex + 1;
+  
+  const promises = [];
+  for (let i = 0; i < count; i++) {
+    // Calculate the next asset ID, wrapping around to 1 when we reach maxAssets
+    const assetId = ((startId + i - 1) % maxAssets) + 1;
+    promises.push(loadPreGeneratedAsset(assetId));
+  }
+  
+  // Update the last asset index for next time
+  (loadPreGeneratedAssets as any).lastAssetIndex = 
+    ((startId + count - 1) % maxAssets);
+  
+  const results = await Promise.all(promises);
+  results.forEach(asset => {
+    if (asset) {
+      // Make sure our asset has a unique ID (in case we load the same asset multiple times)
+      asset.id = `${asset.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      assets.push(asset);
+    }
+  });
+  
+  // If we couldn't load enough assets, fill with random ones
+  if (assets.length < count) {
+    const remaining = count - assets.length;
+    for (let i = 0; i < remaining; i++) {
+      assets.push(generateRandomAsset());
+    }
+  }
+  
+  return assets;
+};
+
+// Split asset data into "initial" and "future" portions for simulating real-time updates
+export const prepareChartDataForRealTimeSimulation = (asset: Asset): {
+  initialData: ChartPoint[],
+  futureData: ChartPoint[]
+} => {
+  // Use first 70% of points as initial data, reserve the rest for future updates
+  const splitPoint = Math.floor(asset.chartData.length * 0.1);
+  
+  return {
+    initialData: asset.chartData.slice(0, splitPoint),
+    futureData: asset.chartData.slice(splitPoint)
+  };
 }; 

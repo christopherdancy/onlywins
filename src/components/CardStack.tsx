@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import SwipeableCard from './SwipeableCard';
-import { Asset, SwipeDirection, ChartStrategy, ActiveTrade } from '../types';
-import { generateAssetCollection, generateRandomAsset } from '../utils/chartUtils';
+import { Asset, SwipeDirection, ChartStrategy, ActiveTrade, ChartPoint } from '../types';
+import { loadPreGeneratedAssets, generateRandomAsset, prepareChartDataForRealTimeSimulation } from '../utils/chartUtils';
 import { useWallet } from '../contexts/WalletContext';
 
 const CardStack: React.FC = () => {
@@ -20,14 +20,37 @@ const CardStack: React.FC = () => {
     recoveryCounter: 0,    // Counter for recovery/correction duration
     ticksSinceDump: 0      // Ticks since last volatility event
   });
+  
+  // Keep track of future data points for each asset
+  const futureDataRef = useRef<{[key: string]: ChartPoint[]}>({});
 
   // Initialize assets on mount
   useEffect(() => {
-    const initialAssets = generateAssetCollection(10);
-    setAssets(initialAssets);
-    if (initialAssets.length > 0) {
-      setActiveAsset(initialAssets[0]);
-    }
+    const loadInitialAssets = async () => {
+      // Reset the asset loading index to ensure we start with asset-1
+      (loadPreGeneratedAssets as any).lastAssetIndex = 0;
+      
+      const initialAssets = await loadPreGeneratedAssets(10);
+      
+      // Prepare future data for each asset
+      initialAssets.forEach(asset => {
+        const { initialData, futureData } = prepareChartDataForRealTimeSimulation(asset);
+        
+        // Store future data for later use
+        futureDataRef.current[asset.id] = futureData;
+        
+        // Update the asset with only the initial data
+        asset.chartData = initialData;
+        asset.currentMarketCap = initialData[initialData.length - 1].marketCap;
+      });
+      
+      setAssets(initialAssets);
+      if (initialAssets.length > 0) {
+        setActiveAsset(initialAssets[0]);
+      }
+    };
+    
+    loadInitialAssets();
   }, []);
 
   // Effect to simulate realtime chart movement
@@ -40,49 +63,21 @@ const CardStack: React.FC = () => {
     // Minimum reasonable market cap (prevent going to zero)
     const MIN_MARKET_CAP = 5_000;
     
-    // Get current strategy
-    const isUptrendStrategy = activeAsset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
-    
-    // Helper functions for volatility - modified for different strategies
-    const nextVolatilityDepth = () => {
-      if (isUptrendStrategy) {
-        // For uptrend: 15-40% dumps
-        return 0.15 + (Math.random() * 0.25);
-      } else {
-        // For downtrend: 15-40% pumps
-        return 0.15 + (Math.random() * 0.25);
-      }
-    };
-    
-    const nextRecoveryStrength = (volatilityDepth: number) => {
-      if (isUptrendStrategy) {
-        // For uptrend: 70-110% recovery after dump (not always full recovery)
-        return volatilityDepth * (0.7 + (Math.random() * 0.4));
-      } else {
-        // For downtrend: 60-90% correction after pump (usually substantial correction)
-        return volatilityDepth * (0.6 + (Math.random() * 0.3));
-      }
-    };
-    
-    const getVolatilityDuration = () => 4 + Math.floor(Math.random() * 3); // 4-6 ticks for both strategies
-    const getRecoveryDuration = () => 6 + Math.floor(Math.random() * 5); // 6-10 ticks for both strategies
-    const getTicksBetweenEvents = () => 30 + Math.floor(Math.random() * 20); // 30-50 ticks between events
-    
     const interval = setInterval(() => {
-      // Update volatility state first
+      // Update volatility state first (keeping existing volatility logic)
       setVolatilityState(prevState => {
         let newState = { ...prevState };
         newState.ticksSinceDump += 1;
         
         // Check if we should start a new volatility event
         if (!newState.inDump && !newState.dumpComplete && 
-            newState.ticksSinceDump >= getTicksBetweenEvents()) {
+            newState.ticksSinceDump >= (30 + Math.floor(Math.random() * 20))) {
           // 20% chance of starting a volatility event when the counter hits
           if (Math.random() < 0.2) {
             newState.inDump = true;
-            newState.dumpDepth = nextVolatilityDepth();
-            newState.dumpCounter = getVolatilityDuration();
-            newState.recoveryStrength = nextRecoveryStrength(newState.dumpDepth);
+            newState.dumpDepth = 0.15 + (Math.random() * 0.25);
+            newState.dumpCounter = 4 + Math.floor(Math.random() * 3);
+            newState.recoveryStrength = newState.dumpDepth * (0.7 + (Math.random() * 0.4));
             newState.ticksSinceDump = 0;
           }
         }
@@ -95,7 +90,7 @@ const CardStack: React.FC = () => {
           if (newState.dumpCounter <= 0) {
             newState.inDump = false;
             newState.dumpComplete = true;
-            newState.recoveryCounter = getRecoveryDuration();
+            newState.recoveryCounter = 6 + Math.floor(Math.random() * 5);
           }
         }
         // Handle recovery/correction phase
@@ -111,112 +106,74 @@ const CardStack: React.FC = () => {
         return newState;
       });
       
-      // Then update the asset with the newly updated volatility state
+      // Update the asset by feeding the next data point from pregenerated future data
       setActiveAsset(prevAsset => {
         if (!prevAsset) return null;
         
-        // Create a new data point showing continued movement based on strategy
-        const lastPoint = prevAsset.chartData[prevAsset.chartData.length - 1];
-        const newTimestamp = Date.now();
+        // Get future data for this asset
+        const futureData = futureDataRef.current[prevAsset.id] || [];
         
-        // Calculate growth factor based on strategy
-        // More aggressive growth near the visible portion of the chart
-        const visiblePoints = Math.floor(prevAsset.chartData.length * 0.75);
-        const recentPoints = prevAsset.chartData.slice(-visiblePoints);
+        if (futureData.length === 0) {
+          // No more future data, keep the last point but update timestamp
+          const lastPoint = prevAsset.chartData[prevAsset.chartData.length - 1];
+          const newChartData = [...prevAsset.chartData.slice(1), {
+            timestamp: Date.now(),
+            marketCap: lastPoint.marketCap
+          }];
+          
+          return {
+            ...prevAsset,
+            chartData: newChartData
+          };
+        }
         
-        // Determine if there's been a plateau (less than 5% change over last 5 points)
-        const plateauDetected = checkForPlateau(recentPoints, isUptrendStrategy);
+        // Take the next point from future data
+        const nextPoint = futureData.shift();
         
-        // Current market cap
-        const currentMarketCap = lastPoint.marketCap;
-        let newMarketCap = currentMarketCap;
+        // Update future data reference
+        futureDataRef.current[prevAsset.id] = futureData;
         
-        // Handle active volatility phase
+        // Add volatility effects based on state
+        let marketCap = nextPoint!.marketCap;
+        
+        // Apply volatility from current volatility state
         if (volatilityState.inDump) {
-          // Calculate change for this tick
           const volatilityPercent = volatilityState.dumpDepth / volatilityState.dumpCounter;
           
-          if (isUptrendStrategy) {
+          if (prevAsset.strategy === ChartStrategy.UPTREND_WITH_DUMPS) {
             // For uptrend: dump means price drop
-            newMarketCap = currentMarketCap * (1 - volatilityPercent * 0.8);
+            marketCap = marketCap * (1 - volatilityPercent * 0.8);
           } else {
             // For downtrend: dump means price pump
-            newMarketCap = currentMarketCap * (1 + volatilityPercent * 0.8);
+            marketCap = marketCap * (1 + volatilityPercent * 0.8);
           }
         }
         // Handle recovery/correction phase
         else if (volatilityState.dumpComplete) {
-          // Calculate recovery amount for this tick
           const recoveryPercent = volatilityState.recoveryStrength / volatilityState.recoveryCounter;
           
-          if (isUptrendStrategy) {
+          if (prevAsset.strategy === ChartStrategy.UPTREND_WITH_DUMPS) {
             // For uptrend: recovery means price increase
-            newMarketCap = currentMarketCap * (1 + recoveryPercent * 0.75);
+            marketCap = marketCap * (1 + recoveryPercent * 0.75);
           } else {
             // For downtrend: recovery means price decrease (correction)
-            newMarketCap = currentMarketCap * (1 - recoveryPercent * 0.75);
-          }
-        }
-        // Normal movement phase
-        else {
-          if (isUptrendStrategy) {
-            // UPTREND STRATEGY: Normal upward growth
-            let growthFactor = 0;
-            
-            if (currentMarketCap > MAX_MARKET_CAP * 0.5) {
-              // If we're over 50% of max cap, severely limit growth
-              growthFactor = 0.0001 + (Math.random() * 0.0003);
-            } else if (currentMarketCap > MAX_MARKET_CAP * 0.1) {
-              // If we're over 10% of max cap, limit growth
-              growthFactor = 0.0005 + (Math.random() * 0.001);
-            } else if (plateauDetected) {
-              // If plateau, create a bigger movement to break out
-              growthFactor = Math.random() * 0.1 + 0.05; // 5-15% jump
-            } else {
-              // Normal growth - still always positive
-              growthFactor = Math.random() * 0.03 + 0.02; // 2-5% per tick
-            }
-            
-            // Calculate new market cap with growth factor
-            newMarketCap = currentMarketCap * (1 + growthFactor);
-          } else {
-            // DOWNTREND STRATEGY: Normal downward movement
-            let dropFactor = 0;
-            
-            if (currentMarketCap < MIN_MARKET_CAP * 2) {
-              // If we're close to minimum, limit further drops
-              dropFactor = 0.0001 + (Math.random() * 0.0005);
-            } else if (plateauDetected) {
-              // If plateau, create a bigger movement to break out downward
-              dropFactor = Math.random() * 0.08 + 0.04; // 4-12% drop
-            } else {
-              // Normal drop - still generally negative
-              dropFactor = Math.random() * 0.025 + 0.015; // 1.5-4% per tick
-            }
-            
-            // Calculate new market cap with drop factor
-            newMarketCap = currentMarketCap * (1 - dropFactor);
-            
-            // Occasional mini-pumps (5% chance) to create hope
-            if (Math.random() < 0.05) {
-              newMarketCap *= (1 + Math.random() * 0.06); // 0-6% mini pump
-            }
+            marketCap = marketCap * (1 - recoveryPercent * 0.75);
           }
         }
         
         // Enforce limits
-        newMarketCap = Math.min(newMarketCap, MAX_MARKET_CAP);
-        newMarketCap = Math.max(newMarketCap, MIN_MARKET_CAP);
+        marketCap = Math.min(marketCap, MAX_MARKET_CAP);
+        marketCap = Math.max(marketCap, MIN_MARKET_CAP);
         
         // Add new point and remove oldest to keep a moving window
         const newChartData = [...prevAsset.chartData.slice(1), {
-          timestamp: newTimestamp,
-          marketCap: newMarketCap
+          timestamp: Date.now(),
+          marketCap: marketCap
         }];
         
         return {
           ...prevAsset,
-          currentMarketCap: newMarketCap,
+          currentMarketCap: marketCap,
           chartData: newChartData
         };
       });
@@ -224,26 +181,6 @@ const CardStack: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [activeAsset, volatilityState]);
-
-  // Helper function to detect plateau based on strategy
-  const checkForPlateau = (points: Array<{marketCap: number}>, isUptrend: boolean): boolean => {
-    if (points.length < 5) return false;
-    
-    const last5Points = points.slice(-5);
-    const startPrice = last5Points[0].marketCap;
-    const endPrice = last5Points[last5Points.length - 1].marketCap;
-    
-    // Calculate growth/drop as percentage
-    const changePercent = (endPrice - startPrice) / startPrice;
-    
-    if (isUptrend) {
-      // For uptrend: plateau means not enough growth (less than 5%)
-      return changePercent < 0.05;
-    } else {
-      // For downtrend: plateau means not enough drop (less than 5%)
-      return changePercent > -0.05;
-    }
-  };
 
   // When moving to the next card, update the active asset
   useEffect(() => {
@@ -360,6 +297,27 @@ const CardStack: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeTrade, activeAsset, handleTradeExit]);
 
+  // If we're running low on cards, generate more
+  const loadMoreAssets = async () => {
+    if (currentIndex >= assets.length - 3) {
+      const newAssets = await loadPreGeneratedAssets(3);
+      
+      // Prepare future data for each new asset
+      newAssets.forEach(asset => {
+        const { initialData, futureData } = prepareChartDataForRealTimeSimulation(asset);
+        
+        // Store future data for later use
+        futureDataRef.current[asset.id] = futureData;
+        
+        // Update the asset with only the initial data
+        asset.chartData = initialData;
+        asset.currentMarketCap = initialData[initialData.length - 1].marketCap;
+      });
+      
+      setAssets(prevAssets => [...prevAssets, ...newAssets]);
+    }
+  };
+
   const handleSwiped = (direction: SwipeDirection) => {
     if (!activeAsset) return;
     
@@ -377,15 +335,8 @@ const CardStack: React.FC = () => {
       }
     }
 
-    // If we're running low on cards, generate more
-    if (currentIndex >= assets.length - 3) {
-      setAssets(prevAssets => [
-        ...prevAssets,
-        generateRandomAsset(),
-        generateRandomAsset(),
-        generateRandomAsset()
-      ]);
-    }
+    // If we're running low on cards, load more
+    loadMoreAssets();
   };
 
   // If no assets yet, show loading
@@ -421,8 +372,25 @@ const CardStack: React.FC = () => {
         <div className="end-of-stack">
           <h3>No more assets to swipe!</h3>
           <button 
-            onClick={() => {
-              const newAssets = generateAssetCollection(10);
+            onClick={async () => {
+              // Reset the asset loading index to start from the beginning
+              // This uses the same static property we added to loadPreGeneratedAssets
+              (loadPreGeneratedAssets as any).lastAssetIndex = 0;
+              
+              const newAssets = await loadPreGeneratedAssets(10);
+              
+              // Prepare future data for each asset
+              newAssets.forEach(asset => {
+                const { initialData, futureData } = prepareChartDataForRealTimeSimulation(asset);
+                
+                // Store future data for later use
+                futureDataRef.current[asset.id] = futureData;
+                
+                // Update the asset with only the initial data
+                asset.chartData = initialData;
+                asset.currentMarketCap = initialData[initialData.length - 1].marketCap;
+              });
+              
               setAssets(newAssets);
               setCurrentIndex(0);
               if (newAssets.length > 0) {
