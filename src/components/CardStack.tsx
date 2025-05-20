@@ -71,12 +71,12 @@ const CardStack: React.FC = () => {
         
         // Check if we should start a new volatility event
         if (!newState.inDump && !newState.dumpComplete && 
-            newState.ticksSinceDump >= (30 + Math.floor(Math.random() * 20))) {
+            newState.ticksSinceDump >= (20 + Math.floor(Math.random() * 10))) {
           // 20% chance of starting a volatility event when the counter hits
           if (Math.random() < 0.2) {
             newState.inDump = true;
             newState.dumpDepth = 0.15 + (Math.random() * 0.25);
-            newState.dumpCounter = 4 + Math.floor(Math.random() * 3);
+            newState.dumpCounter = 3 + Math.floor(Math.random() * 2);
             newState.recoveryStrength = newState.dumpDepth * (0.7 + (Math.random() * 0.4));
             newState.ticksSinceDump = 0;
           }
@@ -90,7 +90,7 @@ const CardStack: React.FC = () => {
           if (newState.dumpCounter <= 0) {
             newState.inDump = false;
             newState.dumpComplete = true;
-            newState.recoveryCounter = 6 + Math.floor(Math.random() * 5);
+            newState.recoveryCounter = 4 + Math.floor(Math.random() * 3);
           }
         }
         // Handle recovery/correction phase
@@ -177,7 +177,7 @@ const CardStack: React.FC = () => {
           chartData: newChartData
         };
       });
-    }, 400); // Slower updates (400ms instead of 200ms)
+    }, 1000); // Update every 1 second to match the pregenerated data timestamps
     
     return () => clearInterval(interval);
   }, [activeAsset, volatilityState]);
