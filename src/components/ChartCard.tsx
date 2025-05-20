@@ -497,7 +497,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
   };
 
   return (
-    <div className="chart-card">
+    <div className={`chart-card ${isActiveTrade ? 'in-trade-mode' : ''}`}>
       <div className="chart-footer">
         <div className="chart-info">
           <div className="token-header">

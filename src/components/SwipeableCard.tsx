@@ -145,10 +145,10 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {/* Live Trade Indicator */}
+      {/* Remove lock indicator section but keep LIVE indicator */}
       {activeTrade && (
         <div className="live-trade-indicator">
-          LOCKED IN
+          CURRENT TRADE
         </div>
       )}
       
