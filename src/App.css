@@ -616,16 +616,19 @@ body, html {
 .wallet {
   display: flex;
   align-items: center;
-  background: rgba(75, 192, 192, 0.15);
-  padding: 0.45rem 0.8rem;
-  border-radius: 1.5rem;
-  border: 1px solid rgba(75, 192, 192, 0.3);
+  justify-content: center;
+  background-color: #1e1e2e;
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: visible;
 }
 
 .wallet-content {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
 .wallet-icon {
@@ -907,4 +910,64 @@ body, html {
 
 .in-trade .token-symbol {
   color: #c0c0d0;
+}
+
+/* Wallet animation effects */
+.wallet-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+.transaction-amount {
+  position: absolute;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: floatUp 1.5s ease-out forwards;
+  white-space: nowrap;
+}
+
+.transaction-amount.positive {
+  background-color: rgba(0, 191, 99, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 191, 99, 0.4);
+}
+
+.transaction-amount.negative {
+  background-color: rgba(255, 107, 107, 0.8);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+}
+
+@keyframes floatUp {
+  0% { 
+    opacity: 0; 
+    transform: translate(-50%, -30%);
+  }
+  15% { 
+    opacity: 1; 
+    transform: translate(-50%, -60%);
+  }
+  85% { 
+    opacity: 1; 
+    transform: translate(-50%, -130%);
+  }
+  100% { 
+    opacity: 0; 
+    transform: translate(-50%, -160%);
+  }
 }

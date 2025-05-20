@@ -1,10 +1,11 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useRef } from 'react';
 
 interface WalletContextType {
   balance: number;
   startingBalance: number;
   sessionProfitPercent: number;
   updateBalance: (amount: number) => void;
+  walletRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -20,6 +21,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
 }) => {
   const [balance, setBalance] = useState(initialBalance);
   const [startingBalance] = useState(initialBalance);
+  const walletRef = useRef<HTMLDivElement | null>(null);
 
   // Calculate session profit percentage
   const sessionProfitPercent = ((balance - startingBalance) / startingBalance) * 100;
@@ -27,6 +29,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
   // Update wallet balance (positive for gain, negative for spending)
   const updateBalance = (amount: number) => {
     setBalance(prevBalance => prevBalance + amount);
+    
+    // Add shake animation to wallet
+    if (walletRef.current) {
+      walletRef.current.classList.add('wallet-shake');
+      setTimeout(() => {
+        if (walletRef.current) {
+          walletRef.current.classList.remove('wallet-shake');
+        }
+      }, 500); // Match shake animation duration
+    }
   };
 
   return (
@@ -34,7 +46,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
       balance, 
       startingBalance,
       sessionProfitPercent,
-      updateBalance 
+      updateBalance,
+      walletRef
     }}>
       {children}
     </WalletContext.Provider>

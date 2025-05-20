@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useWallet } from '../contexts/WalletContext';
+import { useTransactionAnimation } from '../contexts/TransactionAnimationContext';
 
 // Simple wallet icon using SVG
 const WalletIcon = () => (
@@ -11,7 +12,22 @@ const WalletIcon = () => (
 );
 
 const Wallet: React.FC = () => {
-  const { balance, sessionProfitPercent } = useWallet();
+  const { balance, sessionProfitPercent, walletRef } = useWallet();
+  const { isAnimating, transactionAmount, showTransactionAnimation } = useTransactionAnimation();
+  const prevBalanceRef = useRef(balance);
+
+  // Detect balance changes and trigger animation
+  useEffect(() => {
+    const amountChanged = balance - prevBalanceRef.current;
+    
+    // Only show animation when balance actually changes
+    if (amountChanged !== 0) {
+      showTransactionAnimation(amountChanged);
+    }
+    
+    // Update the ref for next comparison
+    prevBalanceRef.current = balance;
+  }, [balance, showTransactionAnimation]);
 
   // Format balance to handle very large or small numbers for better display on mobile
   const formatBalance = (value: number): string => {
@@ -21,13 +37,19 @@ const Wallet: React.FC = () => {
     return `$${value.toFixed(2)}`;
   };
 
+  // Format transaction amount for the animation overlay
+  const formatTransactionAmount = (value: number | null): string => {
+    if (value === null) return '';
+    return `${value > 0 ? '+' : ''}$${Math.abs(value).toFixed(2)}`;
+  };
+
   // Format the profit percentage for display
   const formatProfit = (value: number): string => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
   return (
-    <div className="wallet">
+    <div className="wallet" ref={walletRef}>
       <div className="wallet-content">
         <div className="wallet-icon">
           <WalletIcon />
@@ -46,6 +68,15 @@ const Wallet: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Transaction amount animation overlay */}
+      {isAnimating && transactionAmount !== null && (
+        <div 
+          className={`transaction-amount ${transactionAmount >= 0 ? 'positive' : 'negative'}`}
+        >
+          {formatTransactionAmount(transactionAmount)}
+        </div>
+      )}
     </div>
   );
 };

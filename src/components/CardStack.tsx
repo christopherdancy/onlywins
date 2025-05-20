@@ -264,15 +264,16 @@ const CardStack: React.FC = () => {
   }, [currentIndex, assets]);
 
   // Handle trade entry or double down
-  const handleTradeEntry = () => {
+  const handleTradeEntry = useCallback(() => {
     if (!activeAsset) return;
     
     const EXPIRY_DURATION = 30000; // 30 seconds in milliseconds
     const now = Date.now();
+    const ENTRY_AMOUNT = -1; // Consistent $1 investment for entering or doubling down
     
     if (activeTrade && activeTrade.assetId === activeAsset.id) {
       // Double down - add another $1 investment
-      updateBalance(-1); // Deduct from wallet
+      updateBalance(ENTRY_AMOUNT); // Deduct from wallet with animation
       setActiveTrade({
         ...activeTrade,
         entryPrices: [...activeTrade.entryPrices, activeAsset.currentMarketCap],
@@ -282,7 +283,7 @@ const CardStack: React.FC = () => {
       });
     } else {
       // New trade entry
-      updateBalance(-1); // Deduct from wallet
+      updateBalance(ENTRY_AMOUNT); // Deduct from wallet with animation
       setActiveTrade({
         assetId: activeAsset.id,
         entryPrices: [activeAsset.currentMarketCap],
@@ -295,7 +296,7 @@ const CardStack: React.FC = () => {
     // Show match notification
     // setShowMatch(true);
     // setTimeout(() => setShowMatch(false), 1500);
-  };
+  }, [activeAsset, activeTrade, updateBalance, setActiveTrade]);
   
   // Handle trade exit and calculate profits - wrap in useCallback
   const handleTradeExit = useCallback(() => {
@@ -313,7 +314,7 @@ const CardStack: React.FC = () => {
     // Use position value as return amount (minimum return is 10% of investment)
     const returnAmount = Math.max(positionValue, activeTrade.totalInvestment * 0.1);
     
-    // Update wallet balance
+    // Update wallet balance and trigger animation in Wallet component
     updateBalance(returnAmount);
     
     // Exit trade
