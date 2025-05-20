@@ -17,7 +17,7 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ 
   children, 
-  initialBalance = 100 // Default $100 starting balance
+  initialBalance = 25 // Default $25 starting balance
 }) => {
   const [balance, setBalance] = useState(initialBalance);
   const [startingBalance] = useState(initialBalance);
@@ -28,7 +28,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({
 
   // Update wallet balance (positive for gain, negative for spending)
   const updateBalance = (amount: number) => {
-    setBalance(prevBalance => prevBalance + amount);
+    setBalance(prevBalance => {
+      // Calculate new balance
+      const newBalance = prevBalance + amount;
+      
+      // Prevent balance from going below zero
+      return Math.max(0, newBalance);
+    });
     
     // Add shake animation to wallet
     if (walletRef.current) {

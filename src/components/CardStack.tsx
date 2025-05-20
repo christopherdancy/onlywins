@@ -385,10 +385,10 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
   const startGame = useCallback(() => {
     setGameStarted(true);
     setGameProgress(1); // Move to first asset
-    setInitialBalance(100); // Always start with $100
+    setInitialBalance(25); // Always start with $100
     
-    // Reset wallet balance to $100
-    const resetAmount = 100 - balance;
+    // Reset wallet balance to $25
+    const resetAmount = 25 - balance;
     updateBalance(resetAmount);
   }, [balance, updateBalance]);
 
@@ -399,6 +399,13 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     const EXPIRY_DURATION = 30000; // 30 seconds in milliseconds
     const now = Date.now();
     const ENTRY_AMOUNT = -1; // Consistent $1 investment for entering or doubling down
+    
+    // Check if player has enough balance to enter or double down
+    if (balance < 1) {
+      // Not enough funds to make the trade
+      // Could add a notification here to inform the player
+      return;
+    }
     
     if (activeTrade && activeTrade.assetId === activeAsset.id) {
       // Double down - add another $1 investment
@@ -425,7 +432,7 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     // Show match notification
     // setShowMatch(true);
     // setTimeout(() => setShowMatch(false), 1500);
-  }, [activeAsset, activeTrade, updateBalance, setActiveTrade, gameStarted, gameEnded]);
+  }, [activeAsset, activeTrade, updateBalance, setActiveTrade, gameStarted, gameEnded, balance]);
   
   // Handle trade exit and calculate profits - wrap in useCallback
   const handleTradeExit = useCallback(() => {
@@ -570,7 +577,7 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     setGameProgress(0);
     
     // Reset wallet balance to $100
-    const resetAmount = 100 - balance;
+    const resetAmount = 25 - balance;
     updateBalance(resetAmount);
   }, [balance, updateBalance]);
 

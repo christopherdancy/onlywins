@@ -11,7 +11,7 @@ const IntroCard: React.FC<IntroCardProps> = ({ onStart }) => {
         <h2>OnlyWins!</h2>
         
         <div className="intro-description">
-          <p>Start with $100. Trade 25 charts for maximum profit.</p>
+          <p>Start with $25. Trade 25 charts for maximum profit.</p>
         </div>
         
         <div className="intro-rules">
