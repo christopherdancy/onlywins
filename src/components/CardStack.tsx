@@ -103,6 +103,17 @@ const SwipeableWrapper: React.FC<{
     setSwipeProgress({ left: 0, right: 0 });
   };
 
+  // Handle action button clicks
+  const handleActionButtonClick = (action: 'left' | 'right' | 'up' | 'down') => {
+    const directionObj: SwipeDirection = {
+      isLeft: action === 'left',
+      isRight: action === 'right',
+      isUp: action === 'up',
+      isDown: action === 'down',
+    };
+    onSwiped(directionObj);
+  };
+
   // Calculate rotation and translation based on drag
   const cardStyle: React.CSSProperties = {
     transform: `translateX(${dragOffset.x}px) translateY(${Math.min(Math.abs(dragOffset.x) * 0.15, 30) * (dragOffset.y > 0 ? 1 : -1)}px) rotate(${
@@ -133,6 +144,9 @@ const SwipeableWrapper: React.FC<{
   // Get overlay text based on card type
   const leftOverlayText = isIntroCard ? "SKIP" : "EXIT";
   const rightOverlayText = isIntroCard ? "START" : "RESTART";
+  
+  // Instruction text for buttons
+  const actionInstructionText = isIntroCard ? "Swipe right to begin" : "Swipe right to restart";
 
   return (
     <div className="swipeable-card-container">
@@ -156,6 +170,29 @@ const SwipeableWrapper: React.FC<{
         </div>
 
         {children}
+      </div>
+      
+      {/* Action buttons with emojis - moved outside the card */}
+      <div className="card-action-buttons">
+        <button 
+          className="action-button left-action-button quantum-style" 
+          onClick={() => handleActionButtonClick('left')}
+          aria-label={leftOverlayText}
+        >
+          <span className="action-emoji">
+            ×
+          </span>
+        </button>
+        
+        <button 
+          className="action-button right-action-button quantum-style" 
+          onClick={() => handleActionButtonClick('right')}
+          aria-label={rightOverlayText}
+        >
+          <span className="action-emoji">
+            💰
+          </span>
+        </button>
       </div>
     </div>
   );

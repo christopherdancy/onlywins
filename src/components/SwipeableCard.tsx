@@ -91,6 +91,17 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
     setSwipeProgress({ left: 0, right: 0 });
   };
 
+  // Handle action button clicks
+  const handleActionButtonClick = (action: 'left' | 'right' | 'up' | 'down') => {
+    const directionObj: SwipeDirection = {
+      isLeft: action === 'left',
+      isRight: action === 'right',
+      isUp: action === 'up',
+      isDown: action === 'down',
+    };
+    onSwiped(directionObj);
+  };
+
   // Calculate rotation and translation based on drag
   const cardStyle: React.CSSProperties = {
     transform: `translateX(${dragOffset.x}px) translateY(${Math.min(Math.abs(dragOffset.x) * 0.15, 30) * (dragOffset.y > 0 ? 1 : -1)}px) rotate(${
@@ -134,42 +145,76 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
     transition: swipeProgress.right === 0 ? 'opacity 0.3s ease, transform 0.3s ease' : 'none'
   };
 
-  return (
-    <div
-      className={cardClasses}
-      style={cardStyle}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
-      {/* Remove lock indicator section but keep LIVE indicator */}
-      {activeTrade && (
-        <div className="live-trade-indicator">
-          CURRENT TRADE
-        </div>
-      )}
-      
-      {/* Action Overlays - Always render but control opacity with swipeProgress */}
-      <div className="action-overlay center left-action" style={leftOverlayStyle}>
-        {activeTrade ? 'EXIT' : 'SKIP'}
-      </div>
-      
-      <div className="action-overlay center right-action" style={rightOverlayStyle}>
-        {activeTrade ? 'DOUBLE DOWN' : 'ENTER'}
-      </div>
+  // Labels for actions based on trade status
+  const leftActionLabel = activeTrade ? 'EXIT' : 'SKIP';
+  const rightActionLabel = activeTrade ? 'DOUBLE DOWN' : 'ENTER';
+  
+  // Action buttons instruction text
+  const actionInstructionText = activeTrade 
+    ? "Swipe right to double down"
+    : "Swipe right to enter";
 
-      {/* Asset Chart & Info with investment and profit/loss details */}
-      <ChartCard 
-        asset={asset} 
-        avgEntryPrice={activeTrade ? avgEntryPrice : undefined}
-        activeTotalInvestment={activeTrade ? activeTrade.totalInvestment : undefined}
-        profitLossPercent={activeTrade ? profitLossPercent : undefined}
-        expiryTime={activeTrade ? activeTrade.expiryTime : undefined}
-      />
-    </div>
+  return (
+    <>
+      <div
+        className={cardClasses}
+        style={cardStyle}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      >
+        {/* Trade indicator */}
+        {activeTrade && (
+          <div className="live-trade-indicator">
+            CURRENT TRADE
+          </div>
+        )}
+        
+        {/* Action Overlays - Always render but control opacity with swipeProgress */}
+        <div className="action-overlay center left-action" style={leftOverlayStyle}>
+          {leftActionLabel}
+        </div>
+        
+        <div className="action-overlay center right-action" style={rightOverlayStyle}>
+          {rightActionLabel}
+        </div>
+
+        {/* Asset Chart & Info with investment and profit/loss details */}
+        <ChartCard 
+          asset={asset} 
+          avgEntryPrice={activeTrade ? avgEntryPrice : undefined}
+          activeTotalInvestment={activeTrade ? activeTrade.totalInvestment : undefined}
+          profitLossPercent={activeTrade ? profitLossPercent : undefined}
+          expiryTime={activeTrade ? activeTrade.expiryTime : undefined}
+        />
+      </div>
+      
+      {/* Action buttons with emojis - moved outside the card */}
+      <div className="card-action-buttons">
+        <button 
+          className="action-button left-action-button quantum-style" 
+          onClick={() => handleActionButtonClick('left')}
+          aria-label={leftActionLabel}
+        >
+          <span className="action-emoji">
+            ×
+          </span>
+        </button>
+        
+        <button 
+          className="action-button right-action-button quantum-style" 
+          onClick={() => handleActionButtonClick('right')}
+          aria-label={rightActionLabel}
+        >
+          <span className="action-emoji">
+            💰
+          </span>
+        </button>
+      </div>
+    </>
   );
 };
 
