@@ -1684,3 +1684,55 @@ body, html {
   font-size: 0.8rem;
   pointer-events: none;
 }
+
+/* Toast notification - positioned in the top-right of the card */
+.toast-notification {
+  position: absolute;
+  top: 10px; /* Position at the top of the card */
+  right: 10px; /* Align to the right side of the card */
+  transform: none;
+  background-color: rgba(20, 20, 35, 0.95);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  font-size: 0.9rem;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-left: 3px solid #4bc0c0;
+  text-align: center;
+  pointer-events: none;
+  max-width: 180px;
+}
+
+.toast-notification.show {
+  opacity: 1;
+}
+
+.toast-notification .amount {
+  color: #4bc0c0;
+  font-weight: bold;
+}
+
+@keyframes fadeInOutCard {
+  0% { opacity: 0; transform: translateY(-5px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-5px); }
+}
+
+.toast-notification.animate {
+  animation: fadeInOutCard 2.5s ease forwards;
+}
+
+/* Responsive adjustments for toast */
+@media (max-width: 480px) {
+  .toast-notification {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    max-width: 160px;
+    top: 8px;
+    right: 8px;
+  }
+}

@@ -6,9 +6,17 @@ interface SwipeableCardProps {
   asset: Asset;
   onSwiped: (direction: SwipeDirection) => void;
   activeTrade: ActiveTrade | null;
+  showToast?: boolean;
+  toastMessage?: string;
 }
 
-const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTrade }) => {
+const SwipeableCard: React.FC<SwipeableCardProps> = ({ 
+  asset, 
+  onSwiped, 
+  activeTrade,
+  showToast = false,
+  toastMessage = ""
+}) => {
   const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = React.useState({ x: 0, y: 0 });
   const [direction, setDirection] = React.useState<SwipeDirection>({
@@ -171,6 +179,11 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
           <div className="live-trade-indicator">
             CURRENT TRADE
           </div>
+        )}
+        
+        {/* Toast notification - positioned inside the card */}
+        {showToast && (
+          <div className="toast-notification animate" dangerouslySetInnerHTML={{ __html: toastMessage }}></div>
         )}
         
         {/* Action Overlays - Always render but control opacity with swipeProgress */}

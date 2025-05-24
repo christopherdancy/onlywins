@@ -209,6 +209,8 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
   const [showMatch, setShowMatch] = useState(false);
   const [activeAsset, setActiveAsset] = useState<Asset | null>(null);
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null); // Track active trade
+  const [showToast, setShowToast] = useState(false); // State for toast notification
+  const [toastMessage, setToastMessage] = useState(''); // Message for toast
   const { updateBalance, balance } = useWallet();
   const [volatilityState, setVolatilityState] = useState({
     inDump: false,         // Currently in a dump phase (for uptrend) or pump phase (for downtrend)
@@ -452,6 +454,16 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     if (activeTrade && activeTrade.assetId === activeAsset.id) {
       // Double down - add another $1 investment
       updateBalance(ENTRY_AMOUNT); // Deduct from wallet with animation
+      
+      // Show double down toast notification
+      setToastMessage("Added <span class='amount'>$1</span>");
+      setShowToast(true);
+      
+      // Hide toast after animation
+      setTimeout(() => {
+        setShowToast(false);
+      }, 2500);
+      
       setActiveTrade({
         ...activeTrade,
         entryPrices: [...activeTrade.entryPrices, activeAsset.currentMarketCap],
@@ -515,7 +527,12 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     
     const checkExpiry = () => {
       const now = Date.now();
+      
+      // Debug logging to help diagnose the issue
+      console.log(`Checking expiry: Current time: ${now}, Expiry time: ${activeTrade.expiryTime}, Diff: ${activeTrade.expiryTime - now}ms`);
+      
       if (activeTrade && now >= activeTrade.expiryTime) {
+        console.log('Trade expired! Executing auto-exit.');
         // Automatically exit the trade when it expires
         handleTradeExit();
         
@@ -539,8 +556,11 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
       }
     };
     
-    // Check every 100ms for more responsive expiry
-    const interval = setInterval(checkExpiry, 100);
+    // Check more frequently (every 50ms) for more responsive expiry
+    const interval = setInterval(checkExpiry, 50);
+    
+    // Run the check immediately when the effect runs
+    checkExpiry();
     
     return () => clearInterval(interval);
   }, [activeTrade, activeAsset, handleTradeExit]);
@@ -656,6 +676,8 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
         asset={activeAsset}
         onSwiped={handleSwiped}
         activeTrade={hasActiveTrade ? activeTrade : null}
+        showToast={showToast}
+        toastMessage={toastMessage}
       />
     ) : (
       <div className="loading">Loading asset...</div>

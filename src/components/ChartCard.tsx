@@ -77,13 +77,14 @@ const ChartCard: React.FC<ChartCardProps> = ({
   const [displayPrice, setDisplayPrice] = useState(asset.currentMarketCap);
   const [lastIntervalChange, setLastIntervalChange] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [expiryPosition, setExpiryPosition] = useState<number | null>(null);
   
   // Update display price when asset changes
   useEffect(() => {
     setDisplayPrice(asset.currentMarketCap);
   }, [asset.currentMarketCap]);
   
-  // Update time remaining if in a trade with expiry
+  // Update time remaining when expiryTime changes
   useEffect(() => {
     if (!expiryTime) {
       setTimeRemaining(null);
@@ -93,15 +94,36 @@ const ChartCard: React.FC<ChartCardProps> = ({
     const updateTimeRemaining = () => {
       const now = Date.now();
       const remaining = expiryTime - now;
-      setTimeRemaining(Math.max(0, remaining));
+      
+      // Debug to help diagnose issues
+      console.log(`Time update: Expiry: ${expiryTime}, Now: ${now}, Remaining: ${remaining}ms`);
+      
+      if (remaining <= 0) {
+        // Time's up
+        setTimeRemaining(0);
+        // Let the parent component handle the actual expiry logic
+      } else {
+        setTimeRemaining(remaining);
+        
+        // Update expiry line position based on time remaining
+        const remainingRatio = remaining / 30000; // 30 seconds total
+        const chartDataLength = asset.chartData.length;
+        
+        // Position the expiry line based on the time remaining
+        // It should move from right to left as time decreases
+        const position = chartDataLength + (remainingRatio * chartDataLength * 0.3);
+        setExpiryPosition(position);
+      }
     };
     
-    // Update immediately and then every 1000ms
+    // Run immediately on effect initialization
     updateTimeRemaining();
-    const interval = setInterval(updateTimeRemaining, 1000);
+    
+    // Update more frequently for smoother countdown
+    const interval = setInterval(updateTimeRemaining, 50);
     
     return () => clearInterval(interval);
-  }, [expiryTime]);
+  }, [expiryTime, asset.chartData.length]);
   
   // Update last-interval price change once every 30 seconds
   useEffect(() => {
@@ -121,10 +143,11 @@ const ChartCard: React.FC<ChartCardProps> = ({
       const change = ((recent.marketCap - prev.marketCap) / prev.marketCap) * 100;
       setLastIntervalChange(change);
     };
-    updateChange(); // Run once on mount/asset change
+    updateChange();
+    
     const interval = setInterval(updateChange, 30000);
     return () => clearInterval(interval);
-  }, [asset.chartData]);
+  }, [asset]);
   
   // Determine if we're in uptrend or downtrend strategy
   const isUptrendStrategy = asset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
@@ -221,14 +244,6 @@ const ChartCard: React.FC<ChartCardProps> = ({
       ]
     };
   }, [asset, isInVolatilityEvent, isInRecoveryEvent]);
-
-  // Calculate expiry position for chart annotation
-  const expiryPosition = useMemo(() => {
-    if (!expiryTime || timeRemaining === null || !asset?.chartData?.length) return null;
-    
-    // Position is based on how much time is left relative to the 30-second duration
-    return asset.chartData.length + (timeRemaining / 30000) * asset.chartData.length * 0.3;
-  }, [asset?.chartData?.length, expiryTime, timeRemaining]);
 
   // Position the price bubble at the last visible point
   useEffect(() => {
@@ -354,8 +369,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
       return Math.round(tokens / 10) * 10 >= 100000 
         ? `${(Math.round(tokens / 1000) / 10).toFixed(1)}K` 
         : Math.round(tokens / 10) * 10 >= 10000
-          ? `${Math.round(tokens / 100) / 10}K`
-          : Math.round(tokens / 10) * 10 >= 1000
+          ? `${Math.round(tokens / 100) / 10}K`          : Math.round(tokens / 10) * 10 >= 1000
             ? `${Math.round(tokens / 10) * 10}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
             : `${Math.round(tokens / 10) * 10}`;
     } else if (tokens < 10_000_000) {
