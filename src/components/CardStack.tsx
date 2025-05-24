@@ -179,8 +179,8 @@ const SwipeableWrapper: React.FC<{
           onClick={() => handleActionButtonClick('left')}
           aria-label={leftOverlayText}
         >
-          <span className="action-emoji">
-            ×
+          <span className="action-emoji action-emoji-intro">
+            {isIntroCard ? '⏭️' : '↩️'}
           </span>
         </button>
         
@@ -189,10 +189,15 @@ const SwipeableWrapper: React.FC<{
           onClick={() => handleActionButtonClick('right')}
           aria-label={rightOverlayText}
         >
-          <span className="action-emoji">
-            💰
+          <span className="action-emoji action-emoji-intro">
+            {isIntroCard ? '🚀' : '🔄'}
           </span>
         </button>
+        
+        {/* Instruction text below buttons */}
+        <div className="action-buttons-label">
+          {actionInstructionText}
+        </div>
       </div>
     </div>
   );

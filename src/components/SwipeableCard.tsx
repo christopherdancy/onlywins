@@ -199,8 +199,8 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
           onClick={() => handleActionButtonClick('left')}
           aria-label={leftActionLabel}
         >
-          <span className="action-emoji">
-            ×
+          <span className={`action-emoji ${activeTrade ? 'action-emoji-exit' : ''}`}>
+            {activeTrade ? '💸' : '×'}
           </span>
         </button>
         
@@ -209,10 +209,15 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({ asset, onSwiped, activeTr
           onClick={() => handleActionButtonClick('right')}
           aria-label={rightActionLabel}
         >
-          <span className="action-emoji">
-            💰
+          <span className={`action-emoji ${activeTrade ? 'action-emoji-double-money' : ''}`}>
+            {activeTrade ? '💰💰' : '💰'}
           </span>
         </button>
+        
+        {/* Instruction text below buttons */}
+        <div className="action-buttons-label">
+          {actionInstructionText}
+        </div>
       </div>
     </>
   );

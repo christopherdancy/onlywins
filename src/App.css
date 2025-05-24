@@ -69,9 +69,9 @@ body, html {
   position: relative;
   width: 100%;
   max-width: 360px;
-  height: calc(85vh - 80px);
-  max-height: 550px;
-  margin-bottom: 80px;
+  height: calc(85vh - 110px);
+  max-height: 540px;
+  margin-bottom: 110px;
 }
 
 /* Swipeable card size adjustments */
@@ -1489,12 +1489,12 @@ body, html {
 /* Action Buttons - OnlyWins style */
 .card-action-buttons {
   position: absolute;
-  bottom: -70px;
+  bottom: -80px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
-  gap: 60px;
+  gap: 100px;
   z-index: 10;
 }
 
@@ -1532,7 +1532,7 @@ body, html {
 
 /* For non-chart cards like intro/results */
 .swipeable-card-container .card-action-buttons {
-  bottom: -70px;
+  bottom: -100px;
 }
 
 /* Custom button styles to match Tinder */
@@ -1614,11 +1614,24 @@ body, html {
   font-size: 28px;
 }
 
+/* Custom emoji styles */
+.action-emoji-double-money {
+  font-size: 24px !important;
+}
+
+.action-emoji-exit {
+  font-size: 28px !important;
+}
+
+.action-emoji-intro {
+  font-size: 26px !important;
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .card-action-buttons {
-    gap: 50px;
-    bottom: -65px;
+    gap: 80px;
+    bottom: -90px;
   }
   
   .action-button {
@@ -1644,18 +1657,18 @@ body, html {
   }
   
   .card-stack {
-    height: calc(85vh - 75px);
-    max-height: 520px;
-    margin-bottom: 75px;
+    height: calc(85vh - 100px);
+    max-height: 510px;
+    margin-bottom: 100px;
   }
   
   .swipeable-card, 
   .swipeable-card-container {
-    max-height: 520px;
+    max-height: 510px;
   }
   
   .swipeable-card-container .card-action-buttons {
-    bottom: -65px;
+    bottom: -90px;
   }
 }
 
@@ -1663,7 +1676,7 @@ body, html {
 .action-buttons-label {
   display: block;
   position: absolute;
-  bottom: -30px;
+  bottom: -35px;
   left: 0;
   right: 0;
   text-align: center;
