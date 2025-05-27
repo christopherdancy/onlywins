@@ -2,6 +2,7 @@
 export interface ChartPoint {
   timestamp: number;
   marketCap: number;
+  price?: number; // Optional price field for assets that track both
 }
 
 // For backward compatibility
@@ -21,6 +22,9 @@ export interface Asset {
   description: string;
   chartData: ChartPoint[];
   currentMarketCap: number;
+  currentPrice?: number; // Current price per token
+  totalSupply?: number; // Total token supply
+  displayPrice?: boolean; // Whether to display price (true) or market cap (false)
   iconUrl: string; // SVG icon for the asset
   strategy: ChartStrategy; // Strategy to determine chart behavior
 }

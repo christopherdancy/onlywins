@@ -395,7 +395,7 @@ export const generateAssetCollection = (count: number = 10): Asset[] => {
 // Load a single asset from the pregenerated dataset
 export const loadPreGeneratedAsset = async (assetId: number): Promise<Asset | null> => {
   try {
-    const response = await fetch(`/game-data/asset-${assetId}.json`);
+    const response = await fetch(`/game-data/conference-asset-${assetId}.json`);
     if (!response.ok) {
       console.error(`Failed to load asset-${assetId}.json`);
       return null;
@@ -411,7 +411,7 @@ export const loadPreGeneratedAsset = async (assetId: number): Promise<Asset | nu
 export const loadPreGeneratedAssets = async (count: number = 10): Promise<Asset[]> => {
   const assets: Asset[] = [];
   // Total number of pregenerated assets
-  const maxAssets = 25;
+  const maxAssets = 10;
   
   // Use a static state to track which asset we loaded last
   // This is outside the function to maintain state between calls

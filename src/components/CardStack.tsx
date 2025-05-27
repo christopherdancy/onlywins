@@ -211,7 +211,7 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
       (loadPreGeneratedAssets as any).lastAssetIndex = 0;
       
       // Load all 25 assets at once to ensure we have the complete game
-      const initialAssets = await loadPreGeneratedAssets(25);
+      const initialAssets = await loadPreGeneratedAssets(10);
       
       // Prepare future data for each asset
       initialAssets.forEach(asset => {
@@ -343,18 +343,26 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
         }
         
         // Enforce limits
-        marketCap = Math.min(marketCap, MAX_MARKET_CAP);
-        marketCap = Math.max(marketCap, MIN_MARKET_CAP);
+        // marketCap = Math.min(marketCap, MAX_MARKET_CAP);
+        // marketCap = Math.max(marketCap, MIN_MARKET_CAP);
+        
+        // Calculate price if asset has totalSupply
+        let price = undefined;
+        if (prevAsset.totalSupply) {
+          price = marketCap / prevAsset.totalSupply;
+        }
         
         // Add new point and remove oldest to keep a moving window
         const newChartData = [...prevAsset.chartData.slice(1), {
           timestamp: Date.now(),
-          marketCap: marketCap
+          marketCap: marketCap,
+          ...(price !== undefined && { price })
         }];
         
         return {
           ...prevAsset,
           currentMarketCap: marketCap,
+          ...(price !== undefined && { currentPrice: price }),
           chartData: newChartData
         };
       });

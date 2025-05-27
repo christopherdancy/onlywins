@@ -74,15 +74,19 @@ const ChartCard: React.FC<ChartCardProps> = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const priceBubbleRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
-  const [displayPrice, setDisplayPrice] = useState(asset.currentMarketCap);
+  const [displayValue, setDisplayValue] = useState(asset.currentMarketCap);
   const [lastIntervalChange, setLastIntervalChange] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [expiryPosition, setExpiryPosition] = useState<number | null>(null);
   
-  // Update display price when asset changes
+  // Update display value when asset changes - use price if displayPrice is true, otherwise market cap
   useEffect(() => {
-    setDisplayPrice(asset.currentMarketCap);
-  }, [asset.currentMarketCap]);
+    if (asset.displayPrice && asset.currentPrice !== undefined) {
+      setDisplayValue(asset.currentPrice);
+    } else {
+      setDisplayValue(asset.currentMarketCap);
+    }
+  }, [asset.currentMarketCap, asset.currentPrice, asset.displayPrice]);
   
   // Update time remaining when expiryTime changes
   useEffect(() => {
@@ -209,14 +213,19 @@ const ChartCard: React.FC<ChartCardProps> = ({
     
     const isUptrendStrategy = asset.strategy === ChartStrategy.UPTREND_WITH_DUMPS;
     
-    // Determine uptrend/downtrend styling
-    const lineColor = isUptrendStrategy ? 
-      (isInVolatilityEvent ? '#ff6b6b' : '#4bc0c0') : 
-      (isInRecoveryEvent ? '#4bc0c0' : '#ff6b6b');
-    
     // Get only the needed number of points for display
     const visibleDataCount = Math.floor(asset.chartData.length * 0.75);
     const visibleData = [...asset.chartData].slice(-visibleDataCount);
+    
+    // Determine line color based on actual recent price movement, not strategy
+    // Compare current price to price from a few points ago to determine trend
+    const recentDataPoints = Math.min(10, visibleData.length);
+    const currentValue = visibleData[visibleData.length - 1]?.marketCap || 0;
+    const pastValue = visibleData[visibleData.length - recentDataPoints]?.marketCap || currentValue;
+    const isActuallyRising = currentValue > pastValue;
+    
+    // Use green for rising prices, red for falling prices
+    const lineColor = isActuallyRising ? '#4bc0c0' : '#ff6b6b';
     
     // Prepare labels and data values
     // Use indices as labels since the timestamps might be inconsistent between assets
@@ -385,7 +394,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
   }, [activeTotalInvestment, avgEntryPrice]);
 
   // Format displayed price and trading info
-  const formattedDisplayPrice = useMemo(() => formatSimplifiedPrice(displayPrice), [displayPrice]);
+  const formattedDisplayValue = useMemo(() => formatSimplifiedPrice(displayValue), [displayValue]);
   const formattedAvgEntryPrice = useMemo(() => avgEntryPrice ? formatSimplifiedPrice(avgEntryPrice) : '', [avgEntryPrice]);
   const formattedPositionValue = useMemo(() => positionValue ? `$${positionValue.toFixed(2)}` : '', [positionValue]);
 
@@ -551,7 +560,7 @@ const ChartCard: React.FC<ChartCardProps> = ({
           ref={priceBubbleRef} 
           className={`current-price-bubble ${priceBubbleClasses.join(' ')}`}
         >
-          {formattedDisplayPrice}
+          {formattedDisplayValue}
         </div>
       </div>
     </div>
