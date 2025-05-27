@@ -99,9 +99,6 @@ const ChartCard: React.FC<ChartCardProps> = ({
       const now = Date.now();
       const remaining = expiryTime - now;
       
-      // Debug to help diagnose issues
-      console.log(`Time update: Expiry: ${expiryTime}, Now: ${now}, Remaining: ${remaining}ms`);
-      
       if (remaining <= 0) {
         // Time's up
         setTimeRemaining(0);

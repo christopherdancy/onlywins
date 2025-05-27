@@ -17,7 +17,7 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ 
   children, 
-  initialBalance = 25 // Default $25 starting balance
+  initialBalance = 10 // Default $10 starting balance
 }) => {
   const [balance, setBalance] = useState(initialBalance);
   const [startingBalance] = useState(initialBalance);

@@ -8,10 +8,10 @@ const IntroCard: React.FC<IntroCardProps> = ({ onStart }) => {
   return (
     <div className="intro-card">
       <div className="intro-content">
-        <h2>OnlyWins!</h2>
+        <h2>FEEN!</h2>
         
         <div className="intro-description">
-          <p>Start with $25. Trade 25 charts for maximum profit.</p>
+          <p>Start with $10. Trade 10 charts for maximum profit.</p>
         </div>
         
         <div className="intro-rules">

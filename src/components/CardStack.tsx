@@ -210,7 +210,7 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
       // Reset the asset loading index to ensure we start with asset-1
       (loadPreGeneratedAssets as any).lastAssetIndex = 0;
       
-      // Load all 25 assets at once to ensure we have the complete game
+      // Load all 10 assets at once to ensure we have the complete game
       const initialAssets = await loadPreGeneratedAssets(10);
       
       // Prepare future data for each asset
@@ -409,10 +409,10 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
   const startGame = useCallback(() => {
     setGameStarted(true);
     setGameProgress(1); // Move to first asset
-    setInitialBalance(25); // Always start with $100
+    setInitialBalance(10); // Always start with $100
     
-    // Reset wallet balance to $25
-    const resetAmount = 25 - balance;
+    // Reset wallet balance to $10
+    const resetAmount = 10 - balance;
     updateBalance(resetAmount);
   }, [balance, updateBalance]);
 
@@ -508,8 +508,6 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     const checkExpiry = () => {
       const now = Date.now();
       
-      // Debug logging to help diagnose the issue
-      console.log(`Checking expiry: Current time: ${now}, Expiry time: ${activeTrade.expiryTime}, Diff: ${activeTrade.expiryTime - now}ms`);
       
       if (activeTrade && now >= activeTrade.expiryTime) {
         console.log('Trade expired! Executing auto-exit.');
@@ -619,7 +617,7 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
     setGameProgress(0);
     
     // Reset wallet balance to $100
-    const resetAmount = 25 - balance;
+    const resetAmount = 10 - balance;
     updateBalance(resetAmount);
   }, [balance, updateBalance]);
 
@@ -691,7 +689,7 @@ const CardStack: React.FC<CardStackProps> = ({ updateGameState }) => {
         totalAssets: assets.length
       });
     }
-  }, [gameProgress, assets.length, updateGameState]);
+  }, [gameProgress, assets.length]); // Removed updateGameState from dependencies
 
   return (
     <div className="card-stack">

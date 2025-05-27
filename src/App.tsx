@@ -35,7 +35,7 @@ const App: React.FC = () => {
       <WalletProvider>
         <div className="app">
           <header className="app-header">
-            <h1>OnlyWins</h1>
+            <h1>😈 FEEN</h1>
             
             {/* Game progress display */}
             {gameState.inProgress && (
