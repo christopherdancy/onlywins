@@ -69,7 +69,7 @@ body, html {
   position: relative;
   width: 100%;
   max-width: 360px;
-  height: calc(85vh - 110px);
+  height: calc(85vh - 80px);
   max-height: 540px;
   margin-bottom: 110px;
 }
@@ -1489,12 +1489,12 @@ body, html {
 /* Action Buttons - OnlyWins style */
 .card-action-buttons {
   position: absolute;
-  bottom: -80px;
+  bottom: -70px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
-  gap: 100px;
+  gap: 60px;
   z-index: 10;
 }
 
@@ -1532,7 +1532,7 @@ body, html {
 
 /* For non-chart cards like intro/results */
 .swipeable-card-container .card-action-buttons {
-  bottom: -100px;
+  bottom: -70px;
 }
 
 /* Custom button styles to match Tinder */
@@ -1630,8 +1630,8 @@ body, html {
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .card-action-buttons {
-    gap: 80px;
-    bottom: -90px;
+    gap: 50px;
+    bottom: -65px;
   }
   
   .action-button {
@@ -1657,18 +1657,18 @@ body, html {
   }
   
   .card-stack {
-    height: calc(85vh - 100px);
-    max-height: 510px;
-    margin-bottom: 100px;
+    height: calc(85vh - 75px);
+    max-height: 520px;
+    margin-bottom: 75px;
   }
   
   .swipeable-card, 
   .swipeable-card-container {
-    max-height: 510px;
+    max-height: 520px;
   }
   
   .swipeable-card-container .card-action-buttons {
-    bottom: -90px;
+    bottom: -65px;
   }
 }
 
@@ -1676,7 +1676,7 @@ body, html {
 .action-buttons-label {
   display: block;
   position: absolute;
-  bottom: -35px;
+  bottom: -30px;
   left: 0;
   right: 0;
   text-align: center;

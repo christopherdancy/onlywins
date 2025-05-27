@@ -171,34 +171,6 @@ const SwipeableWrapper: React.FC<{
 
         {children}
       </div>
-      
-      {/* Action buttons with emojis - moved outside the card */}
-      <div className="card-action-buttons">
-        <button 
-          className="action-button left-action-button quantum-style" 
-          onClick={() => handleActionButtonClick('left')}
-          aria-label={leftOverlayText}
-        >
-          <span className="action-emoji action-emoji-intro">
-            {isIntroCard ? '⏭️' : '↩️'}
-          </span>
-        </button>
-        
-        <button 
-          className="action-button right-action-button quantum-style" 
-          onClick={() => handleActionButtonClick('right')}
-          aria-label={rightOverlayText}
-        >
-          <span className="action-emoji action-emoji-intro">
-            {isIntroCard ? '🚀' : '🔄'}
-          </span>
-        </button>
-        
-        {/* Instruction text below buttons */}
-        <div className="action-buttons-label">
-          {actionInstructionText}
-        </div>
-      </div>
     </div>
   );
 };

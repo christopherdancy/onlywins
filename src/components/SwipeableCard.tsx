@@ -204,34 +204,6 @@ const SwipeableCard: React.FC<SwipeableCardProps> = ({
           expiryTime={activeTrade ? activeTrade.expiryTime : undefined}
         />
       </div>
-      
-      {/* Action buttons with emojis - moved outside the card */}
-      <div className="card-action-buttons">
-        <button 
-          className="action-button left-action-button quantum-style" 
-          onClick={() => handleActionButtonClick('left')}
-          aria-label={leftActionLabel}
-        >
-          <span className={`action-emoji ${activeTrade ? 'action-emoji-exit' : ''}`}>
-            {activeTrade ? '💸' : '×'}
-          </span>
-        </button>
-        
-        <button 
-          className="action-button right-action-button quantum-style" 
-          onClick={() => handleActionButtonClick('right')}
-          aria-label={rightActionLabel}
-        >
-          <span className={`action-emoji ${activeTrade ? 'action-emoji-double-money' : ''}`}>
-            {activeTrade ? '💰💰' : '💰'}
-          </span>
-        </button>
-        
-        {/* Instruction text below buttons */}
-        <div className="action-buttons-label">
-          {actionInstructionText}
-        </div>
-      </div>
     </>
   );
 };
