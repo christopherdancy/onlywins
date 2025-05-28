@@ -184,10 +184,25 @@ const ChartCard: React.FC<ChartCardProps> = ({
 
   // Prepare chart price labels (just 4 evenly spaced ones)
   const priceSteps = [];
-  const priceRange = maxMarketCap - minMarketCap;
-  for (let i = 0; i <= 3; i++) {
-    // Start with highest value at top (i=0) and decrease to lowest at bottom (i=3)
-    priceSteps.push(maxMarketCap - (priceRange * i / 3));
+  
+  // Use price values for Y-axis when displayPrice is true, otherwise use market cap
+  if (asset.displayPrice && asset.totalSupply) {
+    // Calculate min/max price from market cap data
+    const minPrice = minMarketCap / asset.totalSupply;
+    const maxPrice = maxMarketCap / asset.totalSupply;
+    const priceRange = maxPrice - minPrice;
+    
+    for (let i = 0; i <= 3; i++) {
+      // Start with highest price at top (i=0) and decrease to lowest at bottom (i=3)
+      priceSteps.push(maxPrice - (priceRange * i / 3));
+    }
+  } else {
+    // Use market cap values for Y-axis
+    const priceRange = maxMarketCap - minMarketCap;
+    for (let i = 0; i <= 3; i++) {
+      // Start with highest value at top (i=0) and decrease to lowest at bottom (i=3)
+      priceSteps.push(maxMarketCap - (priceRange * i / 3));
+    }
   }
   
   // Prepare chart data with extended projection for expiry
